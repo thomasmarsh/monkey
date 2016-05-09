@@ -32,7 +32,7 @@ struct UICard {
 
         sf::Texture paper;
         paper.setSmooth(true);
-        paper.loadFromFile("paper.jpg");
+        paper.loadFromFile("resources/paper.jpg");
 
         sf::Sprite sprite(paper);
         sprite.setScale(width / sprite.getLocalBounds().width,
@@ -89,11 +89,11 @@ struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
 #ifdef DISPLAY_UI
         window.setVerticalSyncEnabled(true);
 
-        if (!font.loadFromFile("ShrimpFriedRiceNo1.ttf")) {
+        if (!font.loadFromFile("resources/ShrimpFriedRiceNo1.ttf")) {
             ERROR("could not load font");
         }
         UICard::RenderCards(font);
-        felt_tx.loadFromFile("felt.jpg");
+        felt_tx.loadFromFile("resources/felt.jpg");
         felt_sprite.setTexture(felt_tx);
         felt_sprite.setScale(2048 / felt_sprite.getLocalBounds().width,
                              1536 / felt_sprite.getLocalBounds().height);

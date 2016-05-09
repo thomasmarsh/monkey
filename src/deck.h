@@ -4,6 +4,7 @@
 #include "rand.h"
 
 #include <memory>
+#include <set>
 
 struct DeckCardSet {
     Cards events;
@@ -18,6 +19,10 @@ struct DeckCardSet {
 
     size_t size() const {
         return events.size() + characters.size() + skills.size();
+    }
+
+    bool empty() const {
+        return events.empty() && characters.empty() && skills.empty();
     }
 
     bool operator != (const DeckCardSet &rhs) const {
@@ -165,6 +170,16 @@ struct Deck {
         print("characters", draw.characters);
         print("skills", draw.skills);
         print_size();
+    }
+
+    bool isConsistent() const {
+        std::set<CardRef> cset;
+        auto d = clone();
+        d->shuffle();
+        for (auto c : d->draw.events)     { cset.insert(c); }
+        for (auto c : d->draw.characters) { cset.insert(c); }
+        for (auto c : d->draw.skills)     { cset.insert(c); }
+        return cset.size() == NUM_CARDS;
     }
 
     void print_size() const {
