@@ -25,16 +25,21 @@ struct PlayerHand {
 
     CardRef at(size_t i) const {
         if (i >= characters.size()) {
-            return skills[i-characters.size()];
+            i -= characters.size();
+            assert(i < skills.size());
+            return skills[i];
         }
+        assert(i < characters.size());
         return characters[i];
     }
 
     CardRef draw(size_t i) {
         if (i >= characters.size()) {
-            assert(i-characters.size() < skills.size());
-            return DrawCard(skills, i-characters.size());
+            i -= characters.size();
+            assert(i < skills.size());
+            return DrawCard(skills, i);
         }
+        assert(i < characters.size());
         return DrawCard(characters, i);
     }
 
@@ -44,9 +49,11 @@ struct PlayerHand {
 
     void debug() const {
         DLOG("Hand:");
+        DLOG("    CHARACTERS");
         for (auto c : characters) {
             DLOG("    {} {}", c, to_string(Card::Get(c)));
         }
+        DLOG("    SKILLS");
         for (auto c : skills) {
             DLOG("    {} {}", c, to_string(Card::Get(c)));
         }

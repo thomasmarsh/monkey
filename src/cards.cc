@@ -61,6 +61,7 @@ static CardType ParseCardType(const std::string &s) {
 
 static ArgType ParseArgType(const std::string &s) {
     if      (s == "NONE")                 { return ArgType::NONE; }
+    else if (s == "VISIBLE")              { return ArgType::VISIBLE; }
     else if (s == "RECV_STYLE")           { return ArgType::RECV_STYLE; }
     else if (s == "RECV_WEAPON")          { return ArgType::RECV_WEAPON; }
     else if (s == "EXPOSED_CHAR")         { return ArgType::EXPOSED_CHAR; }

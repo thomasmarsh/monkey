@@ -29,6 +29,7 @@ struct State {
             DLOG("PLAYER {}", i);
             players[i].debug();
         }
+        challenge.debug();
     }
 
     // State-wide card count
@@ -105,7 +106,7 @@ struct State {
             }
 
             auto ns = p.hand.skills.size();
-            deck->dealCharacters(TARGET_S-std::min(TARGET_S, ns), p.hand.skills);
+            deck->dealSkills(TARGET_S-std::min(TARGET_S, ns), p.hand.skills);
             for (auto i=ns; i < p.hand.skills.size(); ++i) {
                 logDraw(p.id, p.hand.skills[i]);
             }
@@ -319,7 +320,6 @@ struct State {
 
     void playCard(const Move &move, const Card &card) {
         auto &p = current();
-        LOG("<player {}:play {}>", p.id, to_string(card));
         switch (card.type) {
         case CHARACTER:
             p.placeCharacter(card);
@@ -345,6 +345,7 @@ struct State {
             assert(move.card < NUM_CARDS);
             auto c = current().hand.draw(move.card);
             const auto &card = Card::Get(c);
+            LOG("<player {}:play {}>", current().id, to_string(card));
             handleAction(move);
             playCard(move, card);
         } else {

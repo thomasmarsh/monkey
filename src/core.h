@@ -72,6 +72,7 @@ enum class Action : uint8_t {
 
 enum class ArgType : uint8_t {
     NONE,                 // n/a
+    VISIBLE,              // all visible cards (used by CLEAR_FIELD)
     RECV_STYLE,           // a visible character accepting styles
     RECV_WEAPON,          // a visible character accepting weapons
     EXPOSED_CHAR,         // an opponent's empty character
@@ -169,6 +170,7 @@ inline std::string to_string(Action action) {
 static std::string to_string(ArgType a) {
     switch (a) {
     case ArgType::NONE:                 return "NONE";
+    case ArgType::VISIBLE:              return "VISIBLE";
     case ArgType::RECV_STYLE:           return "RECV_STYLE";
     case ArgType::RECV_WEAPON:          return "RECV_WEAPON";
     case ArgType::EXPOSED_CHAR:         return "EXPOSED_CHAR";

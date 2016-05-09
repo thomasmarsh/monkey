@@ -9,8 +9,13 @@ struct PlayerVisible {
         Cards   styles;
         Cards   weapons;
         bool    immune;
+        bool    two_weapons;
 
-        Character(CardRef c) : card(c), immune(false) {}
+        Character(CardRef c)
+        : card(c)
+        , immune(false)
+        , two_weapons(false)
+        {}
 
         bool empty() const {
             return styles.empty() && weapons.empty();
@@ -22,7 +27,8 @@ struct PlayerVisible {
 
         void debug() const {
             DLOG("    Character: {}", to_string(Card::Get(card)));
-            DLOG("        immune = {}", immune);
+            DLOG("        immune      = {}", immune);
+            DLOG("        two_weapons = {}", two_weapons);
             for (const auto c : styles) {
                 DLOG("        {}", to_string(Card::Get(c)));
             }
@@ -44,6 +50,14 @@ struct PlayerVisible {
     Bitset<uint16_t>       exposed_weapon;
     Bitset<uint16_t>       double_style;
 
+    PlayerVisible()
+    : num_characters(0)
+    , invert_value(false)
+    , played_value(0)
+    , played_points(0)
+    {
+    }
+
     void debug() const {
         DLOG("Visible:");
         DLOG("    num_characters = {}", num_characters);
@@ -59,14 +73,6 @@ struct PlayerVisible {
         for (const auto &c : characters) {
             c.debug();
         }
-    }
-
-    PlayerVisible()
-    : num_characters(0)
-    , invert_value(false)
-    , played_value(0)
-    , played_points(0)
-    {
     }
 
     void reset() {
@@ -98,9 +104,10 @@ struct PlayerVisible {
         bool want_weapons = true;
 
         switch (s) {
-        case Special::NO_STYLES:     want_styles  = false; break;
-        case Special::NO_WEAPONS:    want_weapons = false; break;
-        case Special::IMMUNE:        characters[i].immune = true; break;
+        case Special::NO_STYLES:     want_styles               = false; break;
+        case Special::NO_WEAPONS:    want_weapons              = false; break;
+        case Special::IMMUNE:        characters[i].immune      = true;  break;
+        case Special::TWO_WEAPONS:   characters[i].two_weapons = true;  break;
         case Special::DOUBLE_STYLES: double_style.set(i); break;
         default:
             break;
@@ -133,6 +140,12 @@ struct PlayerVisible {
     void placeCharacter(const Card &card) {
         characters.emplace_back(Character {card.id});
 
+        if (card.id == 0x57) {
+            int x = 0;
+            x += 1;
+            LOG("x = {}", x);
+        }
+
         auto i = num_characters;
         ++num_characters;
 
@@ -141,6 +154,7 @@ struct PlayerVisible {
         card.debug();
         assert(num_characters == characters.size());
         assert(num_characters <= sizeof(exposed_char)*8);
+        assert(num_characters <= 10);
 
         setSpecial(i, card.special);
         exposeChar(i);
@@ -254,6 +268,8 @@ struct PlayerVisible {
                     }
                 }
             }
+        } else {
+            LOG("    <empty>");
         }
     }
 };

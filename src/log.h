@@ -4,6 +4,9 @@
 
 //#define NO_LOGGING
 
+#define NO_DEBUG
+#define NO_TRACE
+
 namespace spd = spdlog;
 
 inline std::string LogBasename(const std::string &path) {
@@ -19,25 +22,31 @@ inline std::string LogBasename(const std::string &path) {
 #ifdef NO_LOGGING
 #define LOG(...)
 #define WARN(...)
+#define NO_DEBUG
+#define NO_TRACE
+#else
+#define LOG(...)  BASE_LOG(info, ##__VA_ARGS__)
+#define WARN(...) BASE_LOG(warn, ##__VA_ARGS__)
+#endif // NO_LOGGING
+
+#ifdef NO_DEBUG
 #define DLOG(...)
+#else
+#define DLOG(...) BASE_LOG(debug, ##__VA_ARGS__)
+#endif // NO_DEBUG
+
+
+#ifdef NO_TRACE
 #define TLOG(fmt, ...)
 #define TRACE()
 #else
-
-
-#define LOG(...)  BASE_LOG(info, ##__VA_ARGS__)
-#define WARN(...) BASE_LOG(warn, ##__VA_ARGS__)
-#define DLOG(...) BASE_LOG(debug, ##__VA_ARGS__)
-
 #define TLOG(fmt, ...) \
     do { \
         auto indented = Tracer::indent() + fmt; \
         BASE_LOG(trace, indented.c_str(), ##__VA_ARGS__); \
     } while (0)
-
 #define TRACE() Tracer __trace_(__PRETTY_FUNCTION__, __LINE__)
-
-#endif // NO_LOGGING
+#endif // NO_TRACE
 
 #define ERROR(m, ...) do { \
         BASE_LOG(error, m, ##__VA_ARGS__); \

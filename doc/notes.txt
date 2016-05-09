@@ -49,5 +49,5 @@
       4     - initial hand
     + 1     - steal card
     + 1     - draw extra character
-    + 3     - trade hands
-    = 9
+    + 4     - trade hands
+    = 10

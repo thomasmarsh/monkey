@@ -401,7 +401,7 @@
         "action": "CLEAR_FIELD",
         "affinity": "NONE",
         "special": "NONE",
-        "arg_type": "NONE",
+        "arg_type": "VISIBLE",
         "description": "A card that wipes all cards from the field for all players, including the player who played the Monkey Wrench. The Monkey Wrench may be played on any card in the field. The Challenge may continue with the next play.",
         "quantity": 1,
         "type": "WRENCH",

@@ -138,12 +138,14 @@ struct Deck {
     }
 
     void dealCharacters(size_t n, Cards &dest) {
+        TRACE();
         for (int i=0; i < n; ++i) {
             dest.push_back(drawCharacter());
         }
     }
 
     void dealSkills(size_t n, Cards &dest) {
+        TRACE();
         for (int i=0; i < n; ++i) {
             dest.push_back(drawSkill());
         }

@@ -9,17 +9,23 @@
 #include <cassert>
 
 inline std::string to_string(const Move &m, const Player &player) {
-    return fmt::format("{{ {} {{ {} }} {} {} }}",
-                       to_string(m.action),
-                       m.card == Move::null
-                           ? std::string("null")
-                           : to_string(Card::Get(player.hand.at(m.card))),
-                       m.arg == Move::null
-                           ? std::string("null")
-                           : std::to_string(m.arg),
-                       m.next
-                           ? to_string(*m.next, player)
-                           : std::string("null"));
+    auto s = fmt::format("{{ {} {{ {} }} {} {} }}", to_string(m.action),
+                         m.card == Move::null
+                             ? std::string("null")
+                             : to_string(Card::Get(player.hand.at(m.card))),
+                         m.arg == Move::null
+                             ? std::string("null")
+                             : std::to_string(m.arg),
+                         m.next
+                             ? to_string(*m.next, player)
+                             : std::string("null"));
+
+    auto *move = m.next;
+    while (move) {
+        s += " " + to_string(*move, player);
+        move = move->next;
+    }
+    return s;
 }
 
 struct Moves {
@@ -82,21 +88,24 @@ struct Moves {
         return nullptr;
     }
 
-    void findActionMoves(size_t i, const Card &card) {
+    void findCardMoves(size_t i, const Card &card) {
         TRACE();
-        size_t count = 0;
+
+        size_t initial_count = moves.size();
+
         switch (card.arg_type) {
         case ArgType::NONE:
-            if (card.type != CHARACTER && card.type != WRENCH) {
+            if (card.type != CHARACTER) {
                 ERROR("expected CHARACTER, got {} {}",
                       to_string(card.type),
                       to_string(card));
             }
-            add(card.action, i);
             break;
         case ArgType::RECV_STYLE:
             assert(card.type == STYLE);
             if (!state.challenge.no_styles) {
+                // Consider taking out the XOR here to play both single and double moves on a
+                // character. See the related NOTE in maskedDoubleMoves.
                 maskedMoves(player.visible.recv_style ^ player.visible.double_style, i, card);
                 maskedDoubleMoves(player.visible.double_style, i, card);
             }
@@ -107,46 +116,19 @@ struct Moves {
                 maskedMoves(player.visible.recv_weapon, i, card);
             }
             break;
-        case ArgType::EXPOSED_CHAR:
-            count = maskedMoves(exposed.exposed_char, i, card);
-            if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
-            break;
-        case ArgType::EXPOSED_STYLE:
-            count = maskedMoves(exposed.exposed_style, i, card);
-            if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
-            break;
-        case ArgType::EXPOSED_WEAPON:
-            count = maskedMoves(exposed.exposed_weapon, i, card);
-            if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
-            break;
-        case ArgType::VISIBLE_CHAR_OR_HOLD:
-            visibleOrHoldMoves(i, card);
-            break;
-        case ArgType::OPPONENT:
-            opponentMoves(i, card);
-            break;
-        case ArgType::OPPONENT_HAND:
-            opponentHandMoves(i, card);
-            break;
-        case ArgType::HAND:
-            handMoves(i, card);
-            break;
-        case ArgType::DRAW_PILE:
-            drawPileMoves(i, card);
-            break;
+        case ArgType::VISIBLE:              add(card.action); break;
+        case ArgType::EXPOSED_CHAR:         maskedMoves(exposed.exposed_char, i, card); break;
+        case ArgType::EXPOSED_STYLE:        maskedMoves(exposed.exposed_style, i, card); break;
+        case ArgType::EXPOSED_WEAPON:       maskedMoves(exposed.exposed_weapon, i, card); break;
+        case ArgType::VISIBLE_CHAR_OR_HOLD: visibleOrHoldMoves(i, card); break;
+        case ArgType::OPPONENT:             opponentMoves(i, card); break;
+        case ArgType::OPPONENT_HAND:        opponentHandMoves(i, card); break;
+        case ArgType::HAND:                 handMoves(i, card); break;
+        case ArgType::DRAW_PILE:            drawPileMoves(i, card); break;
         }
-    }
 
-    void findCardMoves(size_t i, const Card &card) {
-        TRACE();
-        switch (card.type) {
-        case CHARACTER: findActionMoves(i, card); break;
-        case STYLE:     findActionMoves(i, card); break;
-        case WEAPON:    findActionMoves(i, card); break;
-        case WRENCH:    findActionMoves(i, card); break;
-        default:
-            ERROR("unhandled: {}", to_string(card));
-            break;
+        if (card.type == CHARACTER && (moves.size() - initial_count) == 0) {
+            add(Action::NONE, i);
         }
     }
 
@@ -182,59 +164,73 @@ struct Moves {
         return player.affinity == card.affinity;
     }
 
-    size_t maskedMoves(uint64_t mask, size_t i, const Card &card) {
+    void maskedMoves(uint64_t mask, size_t i, const Card &card) {
         TRACE();
-        if (!mask) {
-            return 0;
-        }
-        size_t count = 0;
+        if (!mask) { return; }
         for (size_t c : EachBit(mask)) {
             add(card.action, i, c);
-            ++count;
         }
-        return count;
     }
 
-    size_t maskedDoubleMoves(uint64_t mask, size_t i, const Card &card) {
+    std::vector<size_t> matchingSkillsFromIndex(size_t i, const Card &card) {
+        auto nc  = player.hand.characters.size();
+        auto &skills = player.hand.skills;
+
+        std::vector<size_t> matches;
+        matches.reserve(skills.size());
+
+        // The current index in the skills portion of the hand is `i - nc`. We forward to that
+        // position + 1, so we are at the next card in the hand.
+        auto ns = skills.size();
+        for (size_t j=(i-nc)+1; j < ns; ++j) {
+            auto &c = Card::Get(skills[j]);
+            // We could just check for `card.type == STYLE`, but this is more general.
+            if (c.action == card.action && c.arg_type == card.arg_type) {
+                // We need to add back `nc` to restore it to a character relative index.
+                matches.push_back(j + nc);
+            }
+        }
+        return matches;
+    }
+
+    void maskedDoubleMoves(uint64_t mask, size_t i, const Card &card) {
         TRACE();
 
         if (!mask) {
-            return 0;
+            // No visible cards allow double moves.
+            return;
         }
 
-        auto n = Bitset<uint64_t>(mask).count();
-        if (n == 1) {
-            add(card.action, i, Bitset<uint64_t>(mask).index(0));
+        auto matches = matchingSkillsFromIndex(i, card);
+
+        // No matches found means we only have one more card of this type in the hand after the
+        // start position.
+        if (matches.empty()) {
+            // NOTE: if taking of the XOR in the arg_type dispatch, then remove this search here.
+            maskedMoves(mask, i, card);
+            return;
         }
 
-        std::vector<size_t> indices(n);
+        // Finally, iterate over all the cards in hand that accept double styles.
         for (size_t c : EachBit(mask)) {
-            indices.push_back(c);
-        }
-
-        size_t count = 0;
-        for (size_t j=0; j < (n-1); ++j) {
-            for (size_t k=j+1; k < n; ++k) {
-                add(card.action, i, k,
-                    alloc(card.action, i, j));
-                ++count;
+            // For each other card in hand
+            for (auto j : matches) {
+                assert(j > i);
+                add(card.action, j, c,
+                    alloc(card.action, i, c));
             }
         }
-        return count;
     }
 
-    size_t visibleOrHoldMoves(size_t i, const Card &card) {
+    void visibleOrHoldMoves(size_t i, const Card &card) {
         TRACE();
-        size_t count = 0;
         size_t x = 0;
         auto n = player.visible.num_characters;
         for (; x < n; ++x) {
             add(card.action, i, x);
-            ++count;
         }
         // The last move (x > num chars) indicates a hold.
         add(card.action, i, x);
-        return count+1;
     }
 
     void opponentMoves(size_t i, const Card &card) {
@@ -298,7 +294,7 @@ struct Moves {
         TRACE();
         size_t i = 0;
         for (const auto c : player.hand.characters) {
-            findActionMoves(i, Card::Get(c));
+            findCardMoves(i, Card::Get(c));
             ++i;
         }
     }
