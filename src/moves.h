@@ -23,23 +23,39 @@ inline std::string to_string(const Move &m, const Player &player) {
 }
 
 
+#if 0
+#define TRACE() \
+    struct _trace {\
+        _trace() { LOG("ENTER: {}", __PRETTY_FUNCTION__); } \
+        ~_trace() { LOG("LEAVE: {}", __PRETTY_FUNCTION__); } \
+    } _tmp_##__LINE__;
+#else
+#define TRACE()
+#endif
+
 struct Moves {
     std::vector<Move> moves;
     const State &state;
+    const Player &player;
     uint64_t exposed_char;
     uint64_t exposed_style;
     uint64_t exposed_weapon;
 
-    Moves(const State &s) : state(s) {
+    Moves(const State &s) : state(s), player(s.current()) {
+        TRACE();
+        moves.reserve(48);
         findMoves();
     }
 
     std::shared_ptr<Move> findNextAction(size_t, const Card &card) {
+        TRACE();
         WARN("unhandled");
         return nullptr;
     }
 
     void findActionMoves(size_t i, const Card &card) {
+        TRACE();
+        size_t count = 0;
         switch (card.arg_type) {
         case ArgType::NONE:
             if (card.type != CHARACTER && card.type != WRENCH) {
@@ -50,23 +66,28 @@ struct Moves {
             add(Move(card.action, i));
             break;
         case ArgType::RECV_STYLE:
-            if (!state.challenge.flags.no_styles) {
-                maskedMoves(state.current().visible.recv_style, i, card);
+            assert(card.type == STYLE);
+            if (!state.challenge.no_styles) {
+                maskedMoves(player.visible.recv_style, i, card);
             }
             break;
         case ArgType::RECV_WEAPON:
-            if (!state.challenge.flags.no_weapons) {
-                maskedMoves(state.current().visible.recv_weapon, i, card);
+            assert(card.type == WEAPON);
+            if (!state.challenge.no_weapons) {
+                maskedMoves(player.visible.recv_weapon, i, card);
             }
             break;
         case ArgType::EXPOSED_CHAR:
-            maskedMoves(exposed_char, i, card);
+            count = maskedMoves(exposed_char, i, card);
+            if (count == 0 && card.type == CHARACTER) { add(Move(Action::NONE, i)); }
             break;
         case ArgType::EXPOSED_STYLE:
-            maskedMoves(exposed_style, i, card);
+            count = maskedMoves(exposed_style, i, card);
+            if (count == 0 && card.type == CHARACTER) { add(Move(Action::NONE, i)); }
             break;
         case ArgType::EXPOSED_WEAPON:
-            maskedMoves(exposed_weapon, i, card);
+            count = maskedMoves(exposed_weapon, i, card);
+            if (count == 0 && card.type == CHARACTER) { add(Move(Action::NONE, i)); }
             break;
         case ArgType::VISIBLE_CHAR_OR_HOLD:
             visibleOrHoldMoves(i, card);
@@ -87,6 +108,7 @@ struct Moves {
     }
 
     void findCardMoves(size_t i, const Card &card) {
+        TRACE();
         switch (card.type) {
         case CHARACTER: findActionMoves(i, card); break;
         case STYLE:     findActionMoves(i, card); break;
@@ -99,64 +121,79 @@ struct Moves {
     }
 
     void add(const Move&& move) {
+        TRACE();
         moves.emplace_back(move);
     }
 
-    void addConcede() { add(Move::Concede()); }
-    void addPass()    { add(Move::Pass()); }
+    void addConcede() { TRACE(); add(Move::Concede()); }
+    void addPass()    { TRACE(); add(Move::Pass()); }
 
     bool firstMove() {
-        return state.current().visible.characters.empty();
+        TRACE();
+        return player.visible.characters.empty();
     }
 
     bool discardFlag() {
-        return state.current().discard_two;
+        TRACE();
+        return player.discard_two;
     }
 
     bool noCharactersInHand() {
-        return state.current().hand.characters.empty();
+        TRACE();
+        return player.hand.characters.empty();
     }
 
     bool canPlayCard(const Card &card) {
+        TRACE();
         if (firstMove() && card.type != CHARACTER) {
             return false;
         }
 
-        if (state.current().affinity == Affinity::NONE ||
+        if (player.affinity == Affinity::NONE ||
             card.affinity == Affinity::NONE) {
             return true;
         }
 
-        return state.current().affinity == card.affinity;
+        return player.affinity == card.affinity;
     }
 
-    void maskedMoves(uint64_t mask, size_t i, const Card &card) {
+    size_t maskedMoves(uint64_t mask, size_t i, const Card &card) {
+        TRACE();
+        size_t count = 0;
         for (size_t c : EachBit(mask)) {
             add(Move(card.action, i, c));
+            ++count;
         }
+        return count;
     }
 
-    void visibleOrHoldMoves(size_t i, const Card &card) {
+    size_t visibleOrHoldMoves(size_t i, const Card &card) {
+        TRACE();
+        size_t count = 0;
         size_t x = 0;
-        auto n = state.current().visible.num_characters;
+        auto n = player.visible.num_characters;
         for (; x < n; ++x) {
             add(Move(card.action, i, x));
+            ++count;
         }
         // The last move (x > num chars) indicates a hold.
         add(Move(card.action, i, x));
+        return count+1;
     }
 
     void opponentMoves(size_t i, const Card &card) {
+        TRACE();
         for (size_t p=0; p < state.players.size(); ++p) {
-            if (p != state.current().id) {
+            if (p != player.id) {
                 add(Move(card.action, i, p));
             }
         }
     }
 
     void opponentHandMoves(size_t i, const Card &card) {
+        TRACE();
         for (size_t p=0; p < state.players.size(); ++p) {
-            if (p != state.current().id) {
+            if (p != player.id) {
                 if (!state.players[p].hand.empty()) {
                     add(Move(card.action, i, p));
                 }
@@ -165,8 +202,8 @@ struct Moves {
     }
 
     void handMoves(size_t i, const Card &card) {
-        const auto &p = state.current();
-        for (size_t c=0; c < p.hand.size(); ++c) {
+        TRACE();
+        for (size_t c=0; c < player.hand.size(); ++c) {
             // Need to be careful about the current card.
             if (c < i) {
                 add(Move(card.action, i, c));
@@ -177,18 +214,19 @@ struct Moves {
     }
 
     void drawPileMoves(size_t i, const Card &card) {
+        TRACE();
         // 0 = characters, 1 = skills
         add(Move(card.action, i, 0));
         add(Move(card.action, i, 1));
     }
 
     void discardTwo(size_t i) {
-        const auto &p = state.current();
-        if (p.hand.empty()) {
+        TRACE();
+        if (player.hand.empty()) {
             ERROR("unexpected empty hand");
         }
         WARN("unhandled double discard - just discarding one");
-        for (size_t c=0; c < p.hand.size(); ++c) {
+        for (size_t c=0; c < player.hand.size(); ++c) {
             // Need to be careful about the current card.
             if (c < i) {
                 add(Move(Action::DISCARD_ONE, Move::null, c));
@@ -207,14 +245,16 @@ struct Moves {
     }
 
     void firstCharacterMove() {
+        TRACE();
         size_t i = 0;
-        for (const auto c : state.current().hand.characters) {
+        for (const auto c : player.hand.characters) {
             findActionMoves(i, Card::Get(c));
             ++i;
         }
     }
 
     void handleFirstMove() {
+        TRACE();
         if (noCharactersInHand()) {
             addConcede();
         } else if (discardFlag()) {
@@ -225,11 +265,12 @@ struct Moves {
     }
 
     void findMoves() {
+        TRACE();
         std::tie(exposed_char,
                  exposed_style,
                  exposed_weapon) = state.exposed();
 
-        moves.clear();
+        assert(moves.empty());
 
         if (firstMove()) {
             handleFirstMove();
@@ -237,18 +278,16 @@ struct Moves {
         }
 
         size_t i = 0;
-        const auto &hand = state.current().hand;
+        const auto &hand = player.hand;
         for (const auto c : hand.characters) {
-            auto &card = Card::Get(c);
-            LOG("consider: {}", to_string(card));
+            const auto &card = Card::Get(c);
             if (canPlayCard(card)) {
                 findCardMoves(i, card);
             }
             ++i;
         }
         for (const auto c : hand.skills) {
-            auto &card = Card::Get(c);
-            LOG("consider: {}", to_string(card));
+            const auto &card = Card::Get(c);
             if (canPlayCard(card)) {
                 findCardMoves(i, card);
             }
@@ -259,5 +298,3 @@ struct Moves {
         add(Move::Concede());
     }
 };
-
-extern void test_moves();

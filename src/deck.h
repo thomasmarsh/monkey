@@ -84,8 +84,13 @@ struct Deck {
         std::reverse(std::begin(to), std::end(to));
     }
 
-    void shuffleDiscards() {
+    void shuffleCharacterDiscards() {
+        LOG("<shuffle character discards>");
         shuffleDiscard(draw.characters, discard.characters);
+    }
+
+    void shuffleSkillDiscards() {
+        LOG("<shuffle skill discards>");
         shuffleDiscard(draw.skills,     discard.skills);
     }
 
@@ -122,7 +127,7 @@ struct Deck {
         clear();
 
         for (int i=0; i < NUM_CARDS; ++i) {
-            auto &card = Card::Get(i);
+            const auto &card = Card::Get(i);
             assert(i == card.id);
             insert(card, draw);
         }
@@ -132,25 +137,43 @@ struct Deck {
         insert(card, discard);
     }
 
+    void dealCharacters(size_t n, Cards &dest) {
+        for (int i=0; i < n; ++i) {
+            dest.push_back(drawCharacter());
+        }
+    }
+
+    void dealSkills(size_t n, Cards &dest) {
+        for (int i=0; i < n; ++i) {
+            dest.push_back(drawSkill());
+        }
+    }
+
     CardRef drawFromPile(Cards &pile) {
+        assert(!pile.empty());
         auto card = pile.back();
         pile.pop_back();
         return card;
     }
 
-    CardRef drawEvent()     { return DrawCard(draw.events); }
+    CardRef drawEvent() {
+        assert(!draw.events.empty());
+        return DrawCard(draw.events);
+    }
 
     CardRef drawCharacter() {
         if (draw.characters.empty()) {
-            shuffleDiscards();
+            shuffleCharacterDiscards();
         }
+        assert(!draw.characters.empty());
         return DrawCard(draw.characters);
     }
 
     CardRef drawSkill() {
         if (draw.skills.empty()) {
-            shuffleDiscards();
+            shuffleSkillDiscards();
         }
+        assert(!draw.skills.empty());
         return DrawCard(draw.skills);
     }
 

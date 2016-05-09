@@ -6,7 +6,7 @@
 #include <map>
 #include <vector>
 
-using CardRef = uint16_t;
+using CardRef = uint8_t;
 
 constexpr CardRef NUM_CARDS = 198;
 
@@ -25,6 +25,20 @@ struct Card {
     std::string label;
 
     static const Card& Get(CardRef card);
+
+    void debug() const {
+        LOG("Card:");
+        LOG("    id             = {}", id);
+        LOG("    prototype      = {}", prototype);
+        LOG("    quantity       = {}", quantity);
+        LOG("    type           = {}", to_string(type));
+        LOG("    affinity       = {}", to_string(affinity));
+        LOG("    special        = {}", to_string(special));
+        LOG("    action         = {}", to_string(action));
+        LOG("    arg_type       = {}", to_string(arg_type));
+        LOG("    face_value     = {}", face_value);
+        LOG("    inverted_value = {}", inverted_value);
+    }
 };
 
 extern std::string ActionDescription(Action a);
@@ -57,6 +71,7 @@ inline void MoveCards(Cards &source, Cards &target) {
 }
 
 inline CardRef DrawCard(Cards &set) {
+    assert(!set.empty());
     auto card = set.back();
     set.pop_back();
     return card;

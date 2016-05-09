@@ -9,6 +9,7 @@ struct Round {
     uint8_t         current:2;
     uint8_t         challenger:2;
     bool            challenge_finished:1;
+    bool            game_over;
     Bitset<uint8_t> all;
     Bitset<uint8_t> passed;
     Bitset<uint8_t> conceded;
@@ -16,6 +17,7 @@ struct Round {
 
     Round(size_t p) : num_players(p)
     {
+        game_over = false;
         all.fill(num_players);
         hardReset();
         challenger = urand(num_players);
@@ -71,7 +73,7 @@ struct Round {
     }
 
     bool challengeFinished() const {
-        return challenge_finished;
+        return challenge_finished || game_over;
     }
 
     bool finished() const {

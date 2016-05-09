@@ -9,7 +9,6 @@ TEST_CASE("initial challenge state good", "[challenge]") {
 }
 
 TEST_CASE("detect end of challenge", "[challenge]") {
-    SET_LOG_LEVEL(info);
     Challenge c(4);
     for (int i=0; i < 4; ++i) {
         c.round.pass();

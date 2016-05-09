@@ -11,7 +11,6 @@ struct State {
     std::vector<Player>  players;
     Challenge            challenge;
     uint8_t              challenge_num:4;
-    bool                 game_over:1;
 
     State(size_t num_players)
     : deck(std::make_shared<Deck>())
@@ -32,19 +31,40 @@ struct State {
         }
     }
 
-    bool checkGameOver() {
-        return game_over = deck->draw.events.empty();
+    // State-wide card count
+    size_t size() const {
+        size_t count = 0;
+        for (const auto &p : players) {
+            count += p.size();
+        }
+        count += events.size() + deck->size();
+        return count;
+    }
+
+    void validateCards() const {
+        assert(size() == NUM_CARDS);
+    }
+
+#pragma mark - State Management
+
+    void checkGameOver() {
+        challenge.round.game_over = deck->draw.events.empty();
+    }
+
+    bool gameOver() const {
+        return challenge.round.game_over;
     }
 
     void step() {
+        assert(!challenge.round.game_over);
         challenge.step();
-        if (challenge.round.finished()) {
+        if (challenge.finished()) {
             checkGameOver();
         }
     }
 
     void reset() {
-        if (!game_over) {
+        if (!challenge.round.game_over) {
             discardVisible();
             challenge.reset();
             validateCards();
@@ -56,25 +76,8 @@ struct State {
     const Player &current() const { return players[challenge.round.current]; }
           Player &current()       { return players[challenge.round.current]; }
 
-    // State-wide card count
-    size_t size() const {
-        size_t count = 0;
-        for (const auto &p : players)  {
-            count += p.size();
-        }
-        count += events.size() + deck->size();
-        return count;
-    }
-
-    void validateCards() const {
-        assert(size() == NUM_CARDS);
-    }
-
     void discardVisible() {
         for (auto &p : players) {
-            for (const auto c : p.hand.characters) { deck->discardCard(Card::Get(c)); }
-            for (const auto c : p.hand.skills) { deck->discardCard(Card::Get(c)); }
-            p.hand.reset();
             for (const auto &c : p.visible.characters) {
                 for (auto s : c.styles) { deck->discardCard(Card::Get(s)); }
                 for (auto w : c.weapons) { deck->discardCard(Card::Get(w)); }
@@ -88,38 +91,42 @@ struct State {
         return Player::Aggregate::Exposed(challenge.round.current, players);
     }
 
-    void dealPortion(size_t target, Cards &source, size_t dest_size, Player &p)
-    {
-        auto n = target-std::min(target, dest_size);
-
-        for (int i=0; i < n; ++i) {
-            auto c = DrawCard(source);
-            logDraw(p.id, c);
-            p.hand.insert(c);
-        }
-    }
-
     void deal() {
+        constexpr size_t TARGET_C = 4;
+        constexpr size_t TARGET_S = 6;
+
         for (auto &p : players) {
             p.affinity = Affinity::NONE;
-            dealPortion(4, deck->draw.characters, p.hand.characters.size(), p);
-            dealPortion(6, deck->draw.skills,     p.hand.skills.size(),     p);
+
+            auto nc = p.hand.characters.size();
+            deck->dealCharacters(TARGET_C-std::min(TARGET_C, nc), p.hand.characters);
+            for (auto i=nc; i < p.hand.characters.size(); ++i) {
+                logDraw(p.id, p.hand.characters[i]);
+            }
+
+            auto ns = p.hand.skills.size();
+            deck->dealCharacters(TARGET_S-std::min(TARGET_S, ns), p.hand.skills);
+            for (auto i=ns; i < p.hand.skills.size(); ++i) {
+                logDraw(p.id, p.hand.skills[i]);
+            }
         }
     }
 
     void drawEvent() {
         auto c = deck->drawEvent();
         events.push_back(c);
-        auto &card = Card::Get(c);
+        const auto &card = Card::Get(c);
         LOG("<event:{}>", to_string(card));
         handleEvent(card);
     }
 
+#pragma mark - Event Handling
+
     void handleEvent(const Card &card) {
         switch (card.action) {
-        case Action::E_NO_STYLES:       challenge.flags.no_styles  = true; break;
-        case Action::E_NO_WEAPONS:      challenge.flags.no_weapons = true; break;
-        case Action::E_CHAR_BONUS:      challenge.flags.char_bonus = true; break;
+        case Action::E_NO_STYLES:       challenge.no_styles  = true; break;
+        case Action::E_NO_WEAPONS:      challenge.no_weapons = true; break;
+        case Action::E_CHAR_BONUS:      challenge.char_bonus = true; break;
         case Action::E_INVERT_VALUE:    playersInvertValue();  break;
         case Action::E_DISCARD_TWO:     playersDiscardTwo();
         case Action::E_DRAW_ONE_CHAR:   playersDrawOneCharacter(); break;
@@ -128,6 +135,13 @@ struct State {
 
         default:
             ERROR("unhandled card: {}", to_string(card));
+        }
+    }
+
+    void logDraw(size_t i, CardRef c) {
+        LOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
+        if (Card::Get(c).id == 0) {
+            ;
         }
     }
 
@@ -151,9 +165,6 @@ struct State {
         }
     }
 
-    void logDraw(size_t i, CardRef c) {
-        LOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
-    }
 
     void playersDrawTwoSkills() {
         for (auto &p : players) {
@@ -201,11 +212,23 @@ struct State {
         }
     }
 
+#pragma mark - Card Actions
+
+    void pass() {
+        LOG("<player {}:pass>", current().id);
+        challenge.round.pass();
+    }
+
+    void concede() {
+        LOG("<player {}:concede>", current().id);
+        challenge.round.concede();
+    }
+
     void discardOne(const Move &move) {
         auto &hand = current().hand;
         assert(move.arg < hand.size());
         auto c = hand.draw(move.arg);
-        auto &card = Card::Get(c);
+        const auto &card = Card::Get(c);
         LOG("<player {}:discard {}>", current().id, to_string(card));
         deck->discardCard(card);
 
@@ -269,21 +292,30 @@ struct State {
         case Action::KNOCKOUT_STYLE:     knockoutStyle(move.arg); break;
         case Action::KNOCKOUT_WEAPON:    knockoutWeapon(move.arg); break;
         case Action::TRADE_HAND:         tradeHand(move); break;
-        default:
-            WARN("unhandled action: {}", to_string(move.action));
+
+        case Action::CLEAR_FIELD:
+        case Action::DISARM_CHARACTER:
+        case Action::PLAY_WEAPON_RETAIN:
+        case Action::PLAY_DOUBLESTYLE:
+        case Action::CAPTURE_WEAPON:
+        case Action::PLAY_CHARACTER:
+            WARN("unimplemented action: {}", to_string(move.action));
+            break;
+
+        case Action::E_DRAW_TWO_SKILLS:
+        case Action::E_NO_STYLES:
+        case Action::E_DRAW_ONE_CHAR:
+        case Action::E_NO_WEAPONS:
+        case Action::E_RANDOM_STEAL:
+        case Action::E_INVERT_VALUE:
+        case Action::E_DISCARD_TWO:
+        case Action::E_CHAR_BONUS:
+            ERROR("received event: {}", to_string(move.action));
             break;
         }
     }
 
-    void pass() {
-        LOG("<player {}:pass>", current().id);
-        challenge.round.pass();
-    }
-
-    void concede() {
-        LOG("<player {}:concede>", current().id);
-        challenge.round.concede();
-    }
+#pragma mark - Play Move
 
     void playCard(const Move &move, const Card &card) {
         auto &p = current();
@@ -310,14 +342,14 @@ struct State {
 
     void perform(const Move &move) {
         if (move.card != Move::null) {
+            assert(move.card < NUM_CARDS);
             auto c = current().hand.draw(move.card);
-            auto &card = Card::Get(c);
+            const auto &card = Card::Get(c);
             handleAction(move);
             playCard(move, card);
         } else {
             handleAction(move);
         }
-        current().visible.print();
         step();
     }
 };

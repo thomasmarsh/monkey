@@ -47,9 +47,8 @@ TEST_CASE("perform a challenge", "[state]") {
 
 TEST_CASE("play a game", "[state]") {
     State s(4);
-    SET_LOG_LEVEL(info);
     size_t c = 0;
-    while (!s.game_over) {
+    while (!s.challenge.round.game_over) {
         LOG("");
         LOG("CHALLENGE #{}", c);
         LOG("");

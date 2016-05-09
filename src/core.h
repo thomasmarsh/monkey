@@ -101,6 +101,20 @@ inline std::string to_string(Affinity a) {
     }
 }
 
+inline std::string to_string(Special s) {
+    switch (s) {
+    case Special::NONE:                return "NONE";
+    case Special::IMMUNE:              return "IMMUNE";
+    case Special::DOUBLE_STYLES:       return "DOUBLE_STYLES";
+    case Special::STYLE_PLUS_ONE:      return "STYLE_PLUS_ONE";
+    case Special::TWO_WEAPONS:         return "TWO_WEAPONS";
+    case Special::DOUBLE_WEAPON_VALUE: return "DOUBLE_WEAPON_VALUE";
+    case Special::IGNORE_AFFINITY:     return "IGNORE_AFFINITY";
+    case Special::NO_STYLES:           return "NO_STYLES";
+    case Special::NO_WEAPONS:          return "NO_WEAPONS";
+    }
+};
+
 inline std::string to_string_short(CardType t) {
     switch (t) {
     case CHARACTER: return "C";
@@ -151,3 +165,19 @@ inline std::string to_string(Action action) {
     case Action::E_INVERT_VALUE:     return "E_INVERT_VALUE";
     }
 }
+
+static std::string to_string(ArgType a) {
+    switch (a) {
+    case ArgType::NONE:                 return "NONE";
+    case ArgType::RECV_STYLE:           return "RECV_STYLE";
+    case ArgType::RECV_WEAPON:          return "RECV_WEAPON";
+    case ArgType::EXPOSED_CHAR:         return "EXPOSED_CHAR";
+    case ArgType::EXPOSED_STYLE:        return "EXPOSED_STYLE";
+    case ArgType::EXPOSED_WEAPON:       return "EXPOSED_WEAPON";
+    case ArgType::VISIBLE_CHAR_OR_HOLD: return "VISIBLE_CHAR_OR_HOLD";
+    case ArgType::OPPONENT:             return "OPPONENT";
+    case ArgType::OPPONENT_HAND:        return "OPPONENT_HAND";
+    case ArgType::HAND:                 return "HAND";
+    case ArgType::DRAW_PILE:            return "DRAW_PILE";
+    }
+};

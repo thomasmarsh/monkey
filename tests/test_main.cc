@@ -8,7 +8,7 @@
 int main(int argc, char* const argv[]) {
     auto console = spd::stdout_logger_mt("console", true);
     spd::set_pattern("%H:%M:%S.%e%v");
-    spd::set_level(spd::level::warn);
+    SET_LOG_LEVEL(warn);
 
     int result = -1;
     try {

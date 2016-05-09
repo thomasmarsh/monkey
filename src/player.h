@@ -31,7 +31,14 @@ struct Player {
     }
 
     void debug() const {
+        LOG("PLAYER:");
+        LOG("id              = {}", id);
+        LOG("affinity        = {}", to_string(affinity));
+        LOG("ignore_affinity = {}", ignore_affinity);
+        LOG("discard_two     = {}", discard_two);
+        LOG("score           = {}", score);
         hand.debug();
+        visible.debug();
     }
 
     struct Aggregate {

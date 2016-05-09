@@ -12,12 +12,12 @@ static void Permute(PermutationList &result, IndexList combo)
 
 static void Combo(PermutationList &result,
                   IndexList &c,
-                  int n, int offset, int k)
+                  size_t n, size_t offset, size_t k)
 {
     if (k == 0) {
         Permute(result, c);
     } else {
-        for (int i=offset; i <= n-k; ++i) {
+        for (size_t i=offset; i <= n-k; ++i) {
             c.push_back(i);
             Combo(result, c, n, i+1, k-1);
             c.pop_back();

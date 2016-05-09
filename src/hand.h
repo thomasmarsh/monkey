@@ -6,10 +6,6 @@ struct PlayerHand {
     std::vector<CardRef> characters;
     std::vector<CardRef> skills;
 
-    PlayerHand()
-    {
-    }
-
     size_t size() const { return characters.size() + skills.size(); }
     bool empty() const { return characters.empty() && skills.empty(); }
 
@@ -19,6 +15,7 @@ struct PlayerHand {
     }
 
     void insert(CardRef c) {
+        assert(c < NUM_CARDS);
         if (Card::Get(c).type == CHARACTER) {
             characters.push_back(c);
         } else {
@@ -27,7 +24,7 @@ struct PlayerHand {
     }
 
     CardRef at(size_t i) const {
-        if (i > characters.size()) {
+        if (i >= characters.size()) {
             return skills[i-characters.size()];
         }
         return characters[i];
@@ -35,6 +32,7 @@ struct PlayerHand {
 
     CardRef draw(size_t i) {
         if (i >= characters.size()) {
+            assert(i-characters.size() < skills.size());
             return DrawCard(skills, i-characters.size());
         }
         return DrawCard(characters, i);
@@ -47,10 +45,10 @@ struct PlayerHand {
     void debug() const {
         LOG("Hand:");
         for (auto c : characters) {
-            LOG("    {}", to_string(Card::Get(c)));
+            LOG("    {} {}", c, to_string(Card::Get(c)));
         }
         for (auto c : skills) {
-            LOG("    {}", to_string(Card::Get(c)));
+            LOG("    {} {}", c, to_string(Card::Get(c)));
         }
     }
 };

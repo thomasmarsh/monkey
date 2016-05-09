@@ -19,6 +19,17 @@ struct PlayerVisible {
         size_t size() const {
             return 1 + styles.size() + weapons.size();
         }
+
+        void debug() const {
+            LOG("    Character: {}", to_string(Card::Get(card)));
+            LOG("        immune = {}", immune);
+            for (const auto c : styles) {
+                LOG("        {}", to_string(Card::Get(c)));
+            }
+            for (const auto c : weapons) {
+                LOG("        {}", to_string(Card::Get(c)));
+            }
+        }
     };
 
     size_t                 num_characters:4;
@@ -43,6 +54,9 @@ struct PlayerVisible {
         LOG("    exposed_char   = {:016b}", exposed_char);
         LOG("    exposed_style  = {:016b}", exposed_style);
         LOG("    exposed_weapon = {:016b}", exposed_weapon);
+        for (const auto &c : characters) {
+            c.debug();
+        }
     }
 
     PlayerVisible()
@@ -55,13 +69,13 @@ struct PlayerVisible {
     void reset() {
         characters.clear();
         num_characters = 0;
-        invert_value = false;
-        played_value = 0;
-        played_points = 0;
-        recv_style = 0;
-        recv_weapon = 0;
-        exposed_char = 0;
-        exposed_style = 0;
+        invert_value   = false;
+        played_value   = 0;
+        played_points  = 0;
+        recv_style     = 0;
+        recv_weapon    = 0;
+        exposed_char   = 0;
+        exposed_style  = 0;
         exposed_weapon = 0;
     }
 
@@ -75,7 +89,9 @@ struct PlayerVisible {
             characters[i].immune = true;
         }
 
+        // TODO: sometimes a mismatch here
         assert(num_characters == characters.size());
+
         assert(num_characters <= sizeof(exposed_char)*8);
         exposeChar(i);
 
