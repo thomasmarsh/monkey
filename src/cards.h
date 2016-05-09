@@ -27,17 +27,17 @@ struct Card {
     static const Card& Get(CardRef card);
 
     void debug() const {
-        LOG("Card:");
-        LOG("    id             = {}", id);
-        LOG("    prototype      = {}", prototype);
-        LOG("    quantity       = {}", quantity);
-        LOG("    type           = {}", to_string(type));
-        LOG("    affinity       = {}", to_string(affinity));
-        LOG("    special        = {}", to_string(special));
-        LOG("    action         = {}", to_string(action));
-        LOG("    arg_type       = {}", to_string(arg_type));
-        LOG("    face_value     = {}", face_value);
-        LOG("    inverted_value = {}", inverted_value);
+        DLOG("Card:");
+        DLOG("    id             = {}", id);
+        DLOG("    prototype      = {}", prototype);
+        DLOG("    quantity       = {}", quantity);
+        DLOG("    type           = {}", to_string(type));
+        DLOG("    affinity       = {}", to_string(affinity));
+        DLOG("    special        = {}", to_string(special));
+        DLOG("    action         = {}", to_string(action));
+        DLOG("    arg_type       = {}", to_string(arg_type));
+        DLOG("    face_value     = {}", face_value);
+        DLOG("    inverted_value = {}", inverted_value);
     }
 };
 

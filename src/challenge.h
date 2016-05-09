@@ -30,14 +30,14 @@ struct Challenge {
     bool   finished() const { return round.challengeFinished(); }
 
     void debug() const {
-        LOG("Challenge:");
-        LOG("    round_num    = {}", (uint8_t)round_num);
-        LOG("    no_styles    = {}", no_styles);
-        LOG("    no_weapons   = {}", no_weapons);
-        LOG("    char_bonus   = {}", char_bonus);
-        LOG("    invert_value = {}", invert_value);
-        LOG("    current()    = {}", current());
-        LOG("    finished()   = {}", finished());
+        DLOG("Challenge:");
+        DLOG("    round_num    = {}", (uint8_t)round_num);
+        DLOG("    no_styles    = {}", no_styles);
+        DLOG("    no_weapons   = {}", no_weapons);
+        DLOG("    char_bonus   = {}", char_bonus);
+        DLOG("    invert_value = {}", invert_value);
+        DLOG("    current()    = {}", current());
+        DLOG("    finished()   = {}", finished());
         round.debug();
     }
 };

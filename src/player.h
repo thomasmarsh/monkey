@@ -31,31 +31,37 @@ struct Player {
     }
 
     void debug() const {
-        LOG("PLAYER:");
-        LOG("id              = {}", id);
-        LOG("affinity        = {}", to_string(affinity));
-        LOG("ignore_affinity = {}", ignore_affinity);
-        LOG("discard_two     = {}", discard_two);
-        LOG("score           = {}", score);
+        DLOG("PLAYER:");
+        DLOG("id              = {}", id);
+        DLOG("affinity        = {}", to_string(affinity));
+        DLOG("ignore_affinity = {}", ignore_affinity);
+        DLOG("discard_two     = {}", discard_two);
+        DLOG("score           = {}", score);
         hand.debug();
         visible.debug();
     }
 
     struct Aggregate {
-        using u64 = uint64_t;
+        uint64_t exposed_char;
+        uint64_t exposed_style;
+        uint64_t exposed_weapon;
+        uint64_t double_style;
 
-        static std::tuple<u64,u64,u64> Exposed(size_t ignore, const std::vector<Player> &players) {
-            u64 c = 0;
-            u64 s = 0;
-            u64 w = 0;
+        Aggregate(size_t ignore, const std::vector<Player> &players)
+        : exposed_char(0)
+        , exposed_style(0)
+        , exposed_weapon(0)
+        , double_style(0)
+        {
             for (const auto &p : players) {
                 if (p.id != ignore) {
-                    c |= u64(p.visible.exposed_char) << (u64(p.id) << 4);
-                    s |= u64(p.visible.exposed_style) << (u64(p.id) << 4);
-                    w |= u64(p.visible.exposed_weapon) << (u64(p.id) << 4);
+                    auto shift = (uint64_t(p.id) << 4);
+                    exposed_char   |= uint64_t(p.visible.exposed_char)   << shift;
+                    exposed_style  |= uint64_t(p.visible.exposed_style)  << shift;
+                    exposed_weapon |= uint64_t(p.visible.exposed_weapon) << shift;
+                    double_style   |= uint64_t(p.visible.double_style)   << shift;
                 }
             }
-            return {c, s, w};
         }
     };
 };

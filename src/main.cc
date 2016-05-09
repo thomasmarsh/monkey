@@ -24,7 +24,7 @@ void Play() {
                     LOG("    - {}", to_string(move, p));
                 }
                 auto move = m.moves[urand(m.moves.size())];
-                s.perform(move);
+                s.perform(&move);
             }
             s.challenge.round.reset();
             if (s.gameOver()) {
@@ -40,12 +40,13 @@ void Play() {
 
 int main() {
     chdir("/Users/tmarsh/Dropbox (Personal)/monkey");
-    auto console = spd::stdout_logger_mt("console", true);
+    //auto console = spd::stdout_logger_mt("console", true);
+    auto console = spd::rotating_logger_mt("console", "build/log", 1048576 * 5, 3);
     spd::set_pattern("%H:%M:%S.%e%v");
 
     SET_LOG_LEVEL(trace);
     Initialize();
-    for (int i=0; i < 10000; ++i) {
+    while (true) { //for (int i=0; i < 10000; ++i) {
         Play();
     }
 }

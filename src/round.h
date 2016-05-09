@@ -81,14 +81,14 @@ struct Round {
     }
 
     void debug() const {
-        LOG("Round:");
-        LOG("    num_players        = {}", num_players);
-        LOG("    current            = {}", current);
-        LOG("    all                = {:04b}", (uint8_t)all);
-        LOG("    passed             = {:04b}", (uint8_t)passed);
-        LOG("    conceded           = {:04b}", (uint8_t)conceded);
-        LOG("    pending            = {:04b}", (uint8_t)pending);
-        LOG("    challenge_finished = {}", challenge_finished);
-        LOG("    finished()         = {}", finished());
+        DLOG("Round:");
+        DLOG("    num_players        = {}", num_players);
+        DLOG("    current            = {}", current);
+        DLOG("    all                = {:04b}", (uint8_t)all);
+        DLOG("    passed             = {:04b}", (uint8_t)passed);
+        DLOG("    conceded           = {:04b}", (uint8_t)conceded);
+        DLOG("    pending            = {:04b}", (uint8_t)pending);
+        DLOG("    challenge_finished = {}", challenge_finished);
+        DLOG("    finished()         = {}", finished());
     }
 };

@@ -26,7 +26,7 @@ struct State {
 
     void debug() const {
         for (int i=0; i < players.size(); ++i) {
-            LOG("PLAYER {}", i);
+            DLOG("PLAYER {}", i);
             players[i].debug();
         }
     }
@@ -88,7 +88,7 @@ struct State {
     }
 
     auto exposed() const {
-        return Player::Aggregate::Exposed(challenge.round.current, players);
+        return Player::Aggregate(challenge.round.current, players);
     }
 
     void deal() {
@@ -292,8 +292,8 @@ struct State {
         case Action::KNOCKOUT_STYLE:     knockoutStyle(move.arg); break;
         case Action::KNOCKOUT_WEAPON:    knockoutWeapon(move.arg); break;
         case Action::TRADE_HAND:         tradeHand(move); break;
+        case Action::CLEAR_FIELD:        discardVisible(); break;
 
-        case Action::CLEAR_FIELD:
         case Action::DISARM_CHARACTER:
         case Action::PLAY_WEAPON_RETAIN:
         case Action::PLAY_DOUBLESTYLE:
@@ -340,7 +340,7 @@ struct State {
         }
     }
 
-    void perform(const Move &move) {
+    void processMove(const Move &move) {
         if (move.card != Move::null) {
             assert(move.card < NUM_CARDS);
             auto c = current().hand.draw(move.card);
@@ -350,6 +350,15 @@ struct State {
         } else {
             handleAction(move);
         }
+    }
+
+    void perform(const Move *move) {
+        assert(move);
+        while (move) {
+            processMove(*move);
+            move = move->next;
+        }
+
         step();
     }
 };

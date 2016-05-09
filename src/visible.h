@@ -6,9 +6,9 @@
 struct PlayerVisible {
     struct Character {
         CardRef card;
-        Cards styles;
-        Cards weapons;
-        bool immune;
+        Cards   styles;
+        Cards   weapons;
+        bool    immune;
 
         Character(CardRef c) : card(c), immune(false) {}
 
@@ -21,13 +21,13 @@ struct PlayerVisible {
         }
 
         void debug() const {
-            LOG("    Character: {}", to_string(Card::Get(card)));
-            LOG("        immune = {}", immune);
+            DLOG("    Character: {}", to_string(Card::Get(card)));
+            DLOG("        immune = {}", immune);
             for (const auto c : styles) {
-                LOG("        {}", to_string(Card::Get(c)));
+                DLOG("        {}", to_string(Card::Get(c)));
             }
             for (const auto c : weapons) {
-                LOG("        {}", to_string(Card::Get(c)));
+                DLOG("        {}", to_string(Card::Get(c)));
             }
         }
     };
@@ -42,18 +42,20 @@ struct PlayerVisible {
     Bitset<uint16_t>       exposed_char;
     Bitset<uint16_t>       exposed_style;
     Bitset<uint16_t>       exposed_weapon;
+    Bitset<uint16_t>       double_style;
 
     void debug() const {
-        LOG("Visible:");
-        LOG("    num_characters = {}", num_characters);
-        LOG("    invert_value   = {}", invert_value);
-        LOG("    played_value   = {}", played_value);
-        LOG("    played_points  = {}", played_value);
-        LOG("    recv_style     = {:016b}", recv_style);
-        LOG("    recv_weapon    = {:016b}", recv_weapon);
-        LOG("    exposed_char   = {:016b}", exposed_char);
-        LOG("    exposed_style  = {:016b}", exposed_style);
-        LOG("    exposed_weapon = {:016b}", exposed_weapon);
+        DLOG("Visible:");
+        DLOG("    num_characters = {}", num_characters);
+        DLOG("    invert_value   = {}", invert_value);
+        DLOG("    played_value   = {}", played_value);
+        DLOG("    played_points  = {}", played_value);
+        DLOG("    recv_style     = {:016b}", recv_style);
+        DLOG("    recv_weapon    = {:016b}", recv_weapon);
+        DLOG("    exposed_char   = {:016b}", exposed_char);
+        DLOG("    exposed_style  = {:016b}", exposed_style);
+        DLOG("    exposed_weapon = {:016b}", exposed_weapon);
+        DLOG("    double_style   = {:016b}", double_style);
         for (const auto &c : characters) {
             c.debug();
         }
@@ -61,6 +63,7 @@ struct PlayerVisible {
 
     PlayerVisible()
     : num_characters(0)
+    , invert_value(false)
     , played_value(0)
     , played_points(0)
     {
@@ -72,11 +75,59 @@ struct PlayerVisible {
         invert_value   = false;
         played_value   = 0;
         played_points  = 0;
+
         recv_style     = 0;
         recv_weapon    = 0;
         exposed_char   = 0;
         exposed_style  = 0;
         exposed_weapon = 0;
+        double_style   = 0;
+    }
+
+    void dropColumn(size_t i) {
+        recv_style.drop(i);
+        recv_weapon.drop(i);
+        exposed_char.drop(i);
+        exposed_style.drop(i);
+        exposed_weapon.drop(i);
+        double_style.drop(i);
+    }
+
+    void setSpecial(size_t i, Special s) {
+        bool want_styles  = true;
+        bool want_weapons = true;
+
+        switch (s) {
+        case Special::NO_STYLES:     want_styles  = false; break;
+        case Special::NO_WEAPONS:    want_weapons = false; break;
+        case Special::IMMUNE:        characters[i].immune = true; break;
+        case Special::DOUBLE_STYLES: double_style.set(i); break;
+        default:
+            break;
+        }
+
+        if (want_styles)  { recv_style.set(i); }
+        if (want_weapons) { recv_weapon.set(i); }
+    }
+
+    void addValue(const Card &card) {
+        if (invert_value) {
+            played_points += card.inverted_value;
+            played_value  += card.inverted_value;
+        } else {
+            played_points += card.face_value;
+            played_value  += card.face_value;
+        }
+    }
+
+    void reduceValue(const Card &card) {
+        if (invert_value) {
+            played_value  -= card.inverted_value;
+            played_points -= card.inverted_value;
+        } else {
+            played_value  -= card.face_value;
+            played_points -= card.face_value;
+        }
     }
 
     void placeCharacter(const Card &card) {
@@ -85,30 +136,15 @@ struct PlayerVisible {
         auto i = num_characters;
         ++num_characters;
 
-        if (card.special == Special::IMMUNE) {
-            characters[i].immune = true;
-        }
-
         // TODO: sometimes a mismatch here
+        debug();
+        card.debug();
         assert(num_characters == characters.size());
-
         assert(num_characters <= sizeof(exposed_char)*8);
+
+        setSpecial(i, card.special);
         exposeChar(i);
-
-        if (invert_value) {
-            played_points += card.inverted_value;
-            played_value += card.inverted_value;
-        } else {
-            played_points += card.face_value;
-            played_value += card.face_value;
-        }
-
-        if (card.special != Special::NO_STYLES) {
-            recv_style.set(i);
-        }
-        if (card.special != Special::NO_WEAPONS) {
-            recv_weapon.set(i);
-        }
+        addValue(card);
     }
 
     void exposeStyle(size_t i) {
@@ -126,11 +162,13 @@ struct PlayerVisible {
     }
 
     void placeStyle(const Card &card, size_t i) {
+        assert(i < characters.size());
         characters[i].styles.push_back(card.id);
         exposeStyle(i);
     }
 
     void placeWeapon(const Card &card, size_t i) {
+        assert(i < characters.size());
         characters[i].weapons.push_back(card.id);
         exposeWeapon(i);
     }
@@ -153,29 +191,21 @@ struct PlayerVisible {
     }
 
     CardRef removeCharacter(size_t i) {
+        assert(i < characters.size());
         assert(characters[i].empty());
         --num_characters;
         auto c = characters[i].card;
         auto &card = Card::Get(c);
         characters.erase(characters.begin()+i);
 
-        if (invert_value) {
-            played_value -= card.inverted_value;
-            played_points -= card.inverted_value;
-        } else {
-            played_value -= card.face_value;
-            played_points -= card.face_value;
-        }
+        reduceValue(card);
+        dropColumn(i);
 
-        recv_style.drop(i);
-        recv_weapon.drop(i);
-        exposed_char.drop(i);
-        exposed_style.drop(i);
-        exposed_weapon.drop(i);
         return c;
     }
 
     CardRef removeStyle(size_t i) {
+        assert(i < characters.size());
         assert(!characters[i].styles.empty());
         auto card = DrawCard(characters[i].styles);
 
@@ -189,6 +219,7 @@ struct PlayerVisible {
     }
 
     CardRef removeWeapon(size_t i) {
+        assert(i < characters.size());
         assert(!characters[i].weapons.empty());
         auto card = DrawCard(characters[i].weapons);
 

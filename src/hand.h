@@ -43,12 +43,12 @@ struct PlayerHand {
     }
 
     void debug() const {
-        LOG("Hand:");
+        DLOG("Hand:");
         for (auto c : characters) {
-            LOG("    {} {}", c, to_string(Card::Get(c)));
+            DLOG("    {} {}", c, to_string(Card::Get(c)));
         }
         for (auto c : skills) {
-            LOG("    {} {}", c, to_string(Card::Get(c)));
+            DLOG("    {} {}", c, to_string(Card::Get(c)));
         }
     }
 };

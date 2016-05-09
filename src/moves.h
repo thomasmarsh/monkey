@@ -27,11 +27,13 @@ struct Moves {
     std::vector<Move::Ptr> allocated;
     const State &state;
     const Player &player;
-    uint64_t exposed_char;
-    uint64_t exposed_style;
-    uint64_t exposed_weapon;
+    Player::Aggregate exposed;
 
-    Moves(const State &s) : state(s), player(s.current()) {
+    Moves(const State &s)
+    : state(s)
+    , player(s.current())
+    , exposed(player.id, s.players)
+    {
         TRACE();
         moves.reserve(16);
         findMoves();
@@ -67,6 +69,7 @@ struct Moves {
         TRACE();
         assert(i <= 0xFF);
         assert(arg <= 0xFF);
+        if (allocated.capacity() < 16) { allocated.reserve(16); }
         auto *p = new Move {a, uint8_t(i), uint8_t(arg), next};
         allocated.push_back(p);
         return p;
@@ -94,7 +97,8 @@ struct Moves {
         case ArgType::RECV_STYLE:
             assert(card.type == STYLE);
             if (!state.challenge.no_styles) {
-                maskedMoves(player.visible.recv_style, i, card);
+                maskedMoves(player.visible.recv_style ^ player.visible.double_style, i, card);
+                maskedDoubleMoves(player.visible.double_style, i, card);
             }
             break;
         case ArgType::RECV_WEAPON:
@@ -104,15 +108,15 @@ struct Moves {
             }
             break;
         case ArgType::EXPOSED_CHAR:
-            count = maskedMoves(exposed_char, i, card);
+            count = maskedMoves(exposed.exposed_char, i, card);
             if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
             break;
         case ArgType::EXPOSED_STYLE:
-            count = maskedMoves(exposed_style, i, card);
+            count = maskedMoves(exposed.exposed_style, i, card);
             if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
             break;
         case ArgType::EXPOSED_WEAPON:
-            count = maskedMoves(exposed_weapon, i, card);
+            count = maskedMoves(exposed.exposed_weapon, i, card);
             if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
             break;
         case ArgType::VISIBLE_CHAR_OR_HOLD:
@@ -180,10 +184,41 @@ struct Moves {
 
     size_t maskedMoves(uint64_t mask, size_t i, const Card &card) {
         TRACE();
+        if (!mask) {
+            return 0;
+        }
         size_t count = 0;
         for (size_t c : EachBit(mask)) {
             add(card.action, i, c);
             ++count;
+        }
+        return count;
+    }
+
+    size_t maskedDoubleMoves(uint64_t mask, size_t i, const Card &card) {
+        TRACE();
+
+        if (!mask) {
+            return 0;
+        }
+
+        auto n = Bitset<uint64_t>(mask).count();
+        if (n == 1) {
+            add(card.action, i, Bitset<uint64_t>(mask).index(0));
+        }
+
+        std::vector<size_t> indices(n);
+        for (size_t c : EachBit(mask)) {
+            indices.push_back(c);
+        }
+
+        size_t count = 0;
+        for (size_t j=0; j < (n-1); ++j) {
+            for (size_t k=j+1; k < n; ++k) {
+                add(card.action, i, k,
+                    alloc(card.action, i, j));
+                ++count;
+            }
         }
         return count;
     }
@@ -246,23 +281,17 @@ struct Moves {
         if (player.hand.empty()) {
             ERROR("unexpected empty hand");
         }
-        WARN("unhandled double discard - just discarding one");
-        for (size_t c=0; c < player.hand.size(); ++c) {
-            // Need to be careful about the current card.
-            if (c < i) {
-                add(Action::DISCARD_ONE, Move::null, c);
-            } else if (c > i) {
-                add(Action::DISCARD_ONE, Move::null, c-1);
+        if (player.hand.size() == 1) {
+            add(Action::DISCARD_ONE, Move::null, 0);
+            return;
+        }
+
+        for (size_t i=0; i < player.hand.size()-1; ++i) {
+            for (size_t j=i+1; j < player.hand.size(); ++j) {
+                add(Action::DISCARD_ONE, Move::null, j,
+                    alloc(Action::DISCARD_ONE, Move::null, i));
             }
         }
-#if 0
-            auto indices = DoubleIndices(p.hand.size());
-            for (const auto &e : indices) {
-                add(
-                        Move(Action::DISCARD_ONE, e[0], Move::null,
-                             std::make_shared<Move>(Action::DISCARD_ONE, e[1])));
-            }
-#endif
     }
 
     void firstCharacterMove() {
@@ -308,10 +337,6 @@ struct Moves {
 
     void findMoves() {
         TRACE();
-        std::tie(exposed_char,
-                 exposed_style,
-                 exposed_weapon) = state.exposed();
-
         assert(moves.empty());
 
         if (firstMove()) {
