@@ -1,0 +1,53 @@
+- Simultaneous plays cannot exist - plays must be sequential or else
+  certain situations get very confused. A simple example: if every
+  player's intention is to concede, then they've all conceded at once,
+  a non-sensical result, and also likely to result in someone changing
+  their mind at the last second as they hear the others starting to say
+  the word "conceded".
+
+- The ability of the challenger to select other players probably is not
+  good for game balance. On average, all players will get to play an
+  equal number of times. However, that assumes an infinite number of
+  challenges. Assuming, rather, just a short number of plays, say three
+  games, for example, it is very likely that there will be an imbalance
+  in the number of challenges each player participated in. This directly
+  relates to their potential score. This seems fundamentally unfair.
+
+  Options:
+
+    1) Despite the uniqueness of the game mechanic, a simple solution
+       is to eliminate it. Every player participates in every challenge.
+       This is equivalent to the two player game where there is no
+       opponent selection.
+
+    2) If you want to keep the challenge concept, then a mechanism
+       should be designed that encourages equal player participation.
+
+
+- Monkey wrenches seem imbalanced - one wipes out the entire field, but
+  another just reduces the value of one card by one point. Wrenches are
+  rare - maybe they should all be relatively powerful so their meaning
+  is not diluted.
+
+- Overall, it's not really clear why the actions associated with a card
+  are where they are. It seems arbitrary. Many event action could also
+  be character actions, or could be monkey wrenches. The card type
+  (event, skill, tool, etc.) has a different function and gives some
+  structure to the play. That's important, but I think it's also
+  important that the types of actions are somehow related to a card
+  type. If every card can make something random happen in the game, then
+  it dilutes the structural value of separating skills, characters, 
+  monkey wrenches, etc. in to different card types.
+
+- Would be nice if monks and lords have different strategies.
+
+- No skills & no tools events too boring; players wish to concede quickly.
+  Otherwise, better to have types of plays that can be done without skills
+  and tools.
+
+- max characters = 
+      4     - initial hand
+    + 1     - steal card
+    + 1     - draw extra character
+    + 3     - trade hands
+    = 9

@@ -1,0 +1,129 @@
+class AmafBoard {
+  AmafBoard() {
+    offset = 0
+    fill(alread_played, 0)
+  }
+  Clear() {
+    offset++;
+  }
+  Play(move) {
+     already_played[move] = offset
+  }
+  AlreadyPlayed(move) {
+     return already_played[move] == offset
+  }
+  vector already_played
+  int offset
+}
+
+ChooseMove(node, board) {
+  bias = 0.015  // I put a random number here, to be tuned
+  b = bias * bias / 0.25
+  best_value = -1
+  best_move = PASSMOVE
+  for (move in board.allmoves) {
+    c = node.child(move).counts
+    w = node.child(move).wins
+    rc = node.rave_counts[move]
+    rw = node.rave_wins[move]
+    coefficient = 1 - rc / (rc + c + rc * c * b)
+    value = w / c * coef + rw / rc * (1 - coef)  // please here take care of the c==0 and rc == 0 cases
+    if (value > best_value) {
+      best_value = value
+      best_move = move
+    }
+  }
+  return best_move
+}
+
+
+PlayoutInTree(board, moves_played_in_tree, nodes_seen_in_tree) {
+  node = tree.root
+  while (node) {
+    move = ChooseMove(node, board)
+    moves_played_in_tree.append(move)
+    nodes_seen_in_tree.append(node)
+    board.PlayMove(move)
+    node = node.child(move)
+  }
+}
+
+
+PlayoutOutTree(board, AmafBoard played, moves) {
+  int pass = 0
+  while (pass < 2) {
+    move = board.ChooseMoveAndPlay()
+    if (move == PASSMOVE) {
+      pass ++
+      continue
+    } else {
+      pass = 0
+    }
+    if (!played.AlreadyPlayed(move)) {
+      played.Play(move)
+
+      if (!board.last_move_was_black()) {
+        move = -move
+      }
+      moves.append(move)
+    }
+  }
+  return board.black_wins()
+}
+
+
+BackupNode(node, index, black_wins, moves_played_in_tree,
+                    moves_played_out_tree, already_played) {
+  already_played.Clear()
+  win = node.is_black_to_play ? black_wins : !black_wins
+  // normal backup
+  node.wins += win
+  node.counts ++
+  // rave backup
+  for (j = index; j < moves_played_in_tree.size(); j += 2) {
+    move = moves_played_in_tree[j]
+    if (already_played.AlreadyPlayed(move)) continue
+    already_played.Play(move)
+    node.rave_wins[move] += win
+    node.rave_counts[move] ++
+  }
+  for (j = 0; j < moves_played_out_tree.size(); ++j) {
+    move = moves_played_out_tree[j]
+    if (!node.is_black_to_play) move = -move
+
+    // If it is either not the right color or the intersection is
+    // already played we ignore that move for that node
+
+    if (move < 0 || already_played.AlreadyPlayed(move)) continue
+
+    already_played.Play(move)
+    node.rave_wins[move] += win
+    node.rave_counts[move] ++
+  }
+}
+
+
+Backup(black_wins, nodes_seen_in_tree, moves_played_in_tree,
+            moves_played_out_tree, already_played) {
+  for (i = 0; i < nodes_seen_in_tree.size(); ++i) {
+    node = nodes_seen_in_tree[i]
+    BackupNode(node, i, black_wins, moves_played_in_tree,
+                        moves_played_out_tree, already_played)
+  }
+}
+
+
+OneIteration(board_position, AmafBoard already_played) {
+  board = board_position.Copy()
+  already_played.Clear()
+
+  vector moves_played_in_tree
+  vector nodes_seen_in_tree
+  PlayoutInTree(&board, &moves_played_in_tree, &nodes_seen_in_tree)
+
+  vector moves_played_out_tree
+  bool black_wins = PlayoutOutTree(&board, &already_played,
+                                                     &moves_played_out_tree)
+  Backup(black_wins, nodes_seen_in_tree, moves_played_in_tree,
+              moves_played_out_tree, &already_played)
+}

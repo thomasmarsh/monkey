@@ -1,0 +1,13 @@
+- track card origin in TRADE_HAND or THIEF_STEAL so not moved in randomizeHiddenState
+
+- implement one pass traversal for move generation
+    - pass through hand to generate interest list
+    - traverse model according to interests
+
+- memory pool for move lists
+
+- memory pool for mc search
+
+- compare best point value per hand against winners (luck of cards wins every time?)
+
+- inform rollout policy by limit horizon search

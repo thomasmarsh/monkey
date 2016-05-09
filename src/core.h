@@ -1,0 +1,153 @@
+#pragma once
+
+#include <string>
+
+extern void Initialize();
+
+enum class Affinity {
+    NONE,
+    MONK,
+    CLAN,
+};
+
+enum CardType {
+    CHARACTER,
+    STYLE,
+    WEAPON,
+    WRENCH,
+    EVENT,
+};
+
+enum class Special {
+    NONE,
+    IMMUNE,
+    DOUBLE_STYLES,
+    STYLE_PLUS_ONE,
+    TWO_WEAPONS,
+    DOUBLE_WEAPON_VALUE,
+    IGNORE_AFFINITY,
+    NO_STYLES,
+    NO_WEAPONS
+};
+
+enum class Action {
+    // action               // arg_type                 next action
+    NONE,                   // -                        -
+    PASS,                   // -                        -
+    CONCEDE,                // -                        -
+    CLEAR_FIELD,            // -                        -
+    STEAL_CARD,             // OPPONENT_HAND            -
+    TRADE_HAND,             // OPPONENT                 -
+    DISCARD_ONE,            // HAND                     -
+    DRAW_CARD,              // DRAW_PILE                -
+    PLAY_WEAPON,            // VISIBLE_CHAR             -
+    PLAY_STYLE,             // VISIBLE_CHAR             -
+    DISARM_CHARACTER,       // OPPONENT_EMPTY_CHAR      -
+    KNOCKOUT_CHARACTER,     // OPPONENT_EMPTY_CHAR      -
+    KNOCKOUT_STYLE,         // OPPONENT_STYLE_CHAR      -
+    KNOCKOUT_WEAPON,        // OPPONENT_WEAPON_CHAR     -
+    PLAY_WEAPON_RETAIN,     // VISIBLE_CHAR_OR_HOLD     -
+    PLAY_DOUBLESTYLE,       // VISIBLE_CHAR             PLAY_STYLE
+    CAPTURE_WEAPON,         // OPPONENT_WEAPON_CHAR     PLAY_WEAPON_RETAIN
+
+    PLAY_CHARACTER,         // -                        -
+                            // -                        PLAY_CHARACTER
+                            // -                        KNOCKOUT_STYLE
+                            // -                        KNOCKOUT_WEAPON
+                            // -                        CAPTURE_WEAPON
+                            // -                        STEAL_CARD
+                            // -                        DISCARD_ONE
+                            // -                        TRADE_HAND
+                            // -                        DRAW_CARD
+    // events
+    E_DRAW_TWO_SKILLS,
+    E_NO_STYLES,
+    E_DRAW_ONE_CHAR,
+    E_NO_WEAPONS,
+    E_RANDOM_STEAL,
+    E_DISCARD_TWO,
+    E_CHAR_BONUS,
+    E_INVERT_VALUE,
+};
+
+enum class ArgType {
+    NONE,                 // n/a
+    RECV_STYLE,           // a visible character accepting styles
+    RECV_WEAPON,          // a visible character accepting weapons
+    EXPOSED_CHAR,         // an opponent's empty character
+    EXPOSED_STYLE,        // an opponent's exposed style
+    EXPOSED_WEAPON,       // an opponent's exposed weapon
+    VISIBLE_CHAR_OR_HOLD, // a visible character, or hold in hand
+    OPPONENT,             // a given opponent
+    OPPONENT_HAND,        // opponent's hand (i.e., only if they have cards)
+    HAND,                 // a card in hand
+    DRAW_PILE,            // a draw pile (characters or skills)
+};
+
+
+inline std::string to_string_short(Affinity a) {
+    switch (a) {
+    case Affinity::NONE: return "*";
+    case Affinity::MONK: return "M";
+    case Affinity::CLAN: return "C";
+    }
+}
+
+inline std::string to_string(Affinity a) {
+    switch (a) {
+    case Affinity::NONE: return "NONE";
+    case Affinity::MONK: return "MONK";
+    case Affinity::CLAN: return "CLAN";
+    }
+}
+
+inline std::string to_string_short(CardType t) {
+    switch (t) {
+    case CHARACTER: return "C";
+    case STYLE:     return "S";
+    case WEAPON:    return "N";
+    case WRENCH:    return "W";
+    case EVENT:     return "E";
+    }
+}
+
+inline std::string to_string(CardType t) {
+    switch (t) {
+    case CHARACTER: return "CHARACTER";
+    case STYLE:     return "STYLE";
+    case WEAPON:    return "WEAPON";
+    case WRENCH:    return "WRENCH";
+    case EVENT:     return "EVENT";
+    }
+}
+
+inline std::string to_string(Action action) {
+    switch (action) {
+	case Action::NONE:               return "NONE";
+	case Action::PASS:               return "PASS";
+	case Action::CONCEDE:            return "CONCEDE";
+	case Action::CLEAR_FIELD:        return "CLEAR_FIELD";
+	case Action::STEAL_CARD:         return "STEAL_CARD";
+	case Action::TRADE_HAND:         return "TRADE_HAND";
+	case Action::DISCARD_ONE:        return "DISCARD_ONE";
+	case Action::DRAW_CARD:          return "DRAW_CARD";
+	case Action::PLAY_WEAPON:        return "PLAY_WEAPON";
+	case Action::PLAY_STYLE:         return "PLAY_STYLE";
+	case Action::DISARM_CHARACTER:   return "DISARM_CHARACTER";
+	case Action::KNOCKOUT_CHARACTER: return "KNOCKOUT_CHARACTER";
+	case Action::KNOCKOUT_STYLE:     return "KNOCKOUT_STYLE";
+	case Action::KNOCKOUT_WEAPON:    return "KNOCKOUT_WEAPON";
+	case Action::PLAY_WEAPON_RETAIN: return "PLAY_WEAPON_RETAIN";
+	case Action::PLAY_DOUBLESTYLE:   return "PLAY_DOUBLESTYLE";
+	case Action::CAPTURE_WEAPON:     return "CAPTURE_WEAPON";
+	case Action::PLAY_CHARACTER:     return "PLAY_CHARACTER";
+    case Action::E_DRAW_TWO_SKILLS:  return "E_DRAW_TWO_SKILLS";
+    case Action::E_NO_STYLES:        return "E_NO_STYLES";
+    case Action::E_DRAW_ONE_CHAR:    return "E_DRAW_ONE_CHAR";
+    case Action::E_NO_WEAPONS:       return "E_NO_WEAPONS";
+    case Action::E_RANDOM_STEAL:     return "E_RANDOM_STEAL";
+    case Action::E_DISCARD_TWO:      return "E_DISCARD_TWO";
+    case Action::E_CHAR_BONUS:       return "E_CHAR_BONUS";
+    case Action::E_INVERT_VALUE:     return "E_INVERT_VALUE";
+    }
+}

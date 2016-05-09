@@ -1,0 +1,2 @@
+set -x
+g++ -I/usr/local/include monkey.cc json11.cpp -o monkey -std=c++14 -Wall -O3 -L/usr/local/lib -ltcmalloc -lsfml-window -lsfml-system -lsfml-graphics
