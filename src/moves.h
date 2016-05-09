@@ -13,7 +13,7 @@ inline std::string to_string(const Move &m, const Player &player) {
                        to_string(m.action),
                        m.card == Move::null
                            ? std::string("null")
-                           : to_string(Card::Get(player.hand.cards[m.card])),
+                           : to_string(Card::Get(player.hand.at(m.card))),
                        m.arg == Move::null
                            ? std::string("null")
                            : std::to_string(m.arg),
@@ -114,7 +114,7 @@ struct Moves {
     }
 
     bool noCharactersInHand() {
-        return state.current().hand.num_characters == 0;
+        return state.current().hand.characters.empty();
     }
 
     bool canPlayCard(const Card &card) {
@@ -207,12 +207,10 @@ struct Moves {
     }
 
     void firstCharacterMove() {
-        auto &cards = state.current().hand.cards;
-        for (int i=0; i < cards.size(); ++i) {
-            auto &card = Card::Get(cards[i]);
-            if (card.type == CHARACTER) {
-                findActionMoves(i, card);
-            }
+        size_t i = 0;
+        for (const auto c : state.current().hand.characters) {
+            findActionMoves(i, Card::Get(c));
+            ++i;
         }
     }
 
@@ -238,13 +236,23 @@ struct Moves {
             return;
         }
 
-        auto &cards = state.current().hand.cards;
-        for (int i=0; i < cards.size(); ++i) {
-            auto &card = Card::Get(cards[i]);
+        size_t i = 0;
+        const auto &hand = state.current().hand;
+        for (const auto c : hand.characters) {
+            auto &card = Card::Get(c);
             LOG("consider: {}", to_string(card));
             if (canPlayCard(card)) {
                 findCardMoves(i, card);
             }
+            ++i;
+        }
+        for (const auto c : hand.skills) {
+            auto &card = Card::Get(c);
+            LOG("consider: {}", to_string(card));
+            if (canPlayCard(card)) {
+                findCardMoves(i, card);
+            }
+            ++i;
         }
 
         add(Move::Pass());

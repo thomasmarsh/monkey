@@ -33,6 +33,7 @@ void Play() {
 }
 
 int main() {
+    chdir("/Users/tmarsh/Dropbox (Personal)/monkey");
     auto console = spd::stdout_logger_mt("console", true);
     spd::set_pattern("%H:%M:%S.%e%v");
 

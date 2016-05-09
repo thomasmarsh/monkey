@@ -18,6 +18,8 @@ struct Player {
     void reset() {
         affinity        = Affinity::NONE;
         ignore_affinity = false;
+        discard_two     = false;
+        score           = 0;
     }
 
     void placeCharacter(const Card &card) { visible.placeCharacter(card); }

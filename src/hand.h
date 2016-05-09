@@ -3,46 +3,53 @@
 #include "cards.h"
 
 struct PlayerHand {
-    size_t               num_characters;
-    size_t               num_skills;
-    std::vector<CardRef> cards;
+    std::vector<CardRef> characters;
+    std::vector<CardRef> skills;
 
     PlayerHand()
-    : num_characters(0)
-    , num_skills(0)
     {
     }
 
-    size_t size() const { return cards.size(); }
-    bool empty() const { return cards.empty(); }
+    size_t size() const { return characters.size() + skills.size(); }
+    bool empty() const { return characters.empty() && skills.empty(); }
 
     void reset() {
-        cards.clear();
-        num_skills = 0;
-        num_characters = 0;
+        characters.clear();
+        skills.clear();
     }
 
     void insert(CardRef c) {
-        cards.push_back(c);
-
-        auto &card = Card::Get(c);
-        switch (card.type) {
-        case CHARACTER:
-            ++num_characters;
-            break;
-        default:
-            ++num_skills;
-            break;
+        if (Card::Get(c).type == CHARACTER) {
+            characters.push_back(c);
+        } else {
+            skills.push_back(c);
         }
     }
 
+    CardRef at(size_t i) const {
+        if (i > characters.size()) {
+            return skills[i-characters.size()];
+        }
+        return characters[i];
+    }
+
+    CardRef draw(size_t i) {
+        if (i >= characters.size()) {
+            return DrawCard(skills, i-characters.size());
+        }
+        return DrawCard(characters, i);
+    }
+
     CardRef drawRandom() {
-        return DrawCard(cards, urand(cards.size()));
+        return draw(urand(size()));
     }
 
     void debug() const {
-        LOG("Hand (c={} s={}):", num_characters, num_skills);
-        for (auto c : cards) {
+        LOG("Hand:");
+        for (auto c : characters) {
+            LOG("    {}", to_string(Card::Get(c)));
+        }
+        for (auto c : skills) {
             LOG("    {}", to_string(Card::Get(c)));
         }
     }

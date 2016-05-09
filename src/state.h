@@ -72,9 +72,8 @@ struct State {
 
     void discardVisible() {
         for (auto &p : players) {
-            for (const auto c : p.hand.cards) {
-                deck->discardCard(Card::Get(c));
-            }
+            for (const auto c : p.hand.characters) { deck->discardCard(Card::Get(c)); }
+            for (const auto c : p.hand.skills) { deck->discardCard(Card::Get(c)); }
             p.hand.reset();
             for (const auto &c : p.visible.characters) {
                 for (auto s : c.styles) { deck->discardCard(Card::Get(s)); }
@@ -103,8 +102,8 @@ struct State {
     void deal() {
         for (auto &p : players) {
             p.affinity = Affinity::NONE;
-            dealPortion(4, deck->draw.characters, p.hand.num_characters, p);
-            dealPortion(6, deck->draw.skills,     p.hand.num_skills,     p);
+            dealPortion(4, deck->draw.characters, p.hand.characters.size(), p);
+            dealPortion(6, deck->draw.skills,     p.hand.skills.size(),     p);
         }
     }
 
@@ -203,9 +202,9 @@ struct State {
     }
 
     void discardOne(const Move &move) {
-        auto &cards = current().hand.cards;
-        assert(move.arg < cards.size());
-        auto c = DrawCard(cards, move.arg);
+        auto &hand = current().hand;
+        assert(move.arg < hand.size());
+        auto c = hand.draw(move.arg);
         auto &card = Card::Get(c);
         LOG("<player {}:discard {}>", current().id, to_string(card));
         deck->discardCard(card);
@@ -292,18 +291,14 @@ struct State {
         switch (card.type) {
         case CHARACTER:
             p.placeCharacter(card);
-            --p.hand.num_characters;
             break;
         case STYLE:
-            --p.hand.num_skills;
             p.placeStyle(card, move.arg);
             break;
         case WEAPON:
-            --p.hand.num_skills;
             p.placeWeapon(card, move.arg);
             break;
         case WRENCH:
-            --p.hand.num_skills;
             deck->discardCard(card);
             break;
         default:
@@ -315,7 +310,7 @@ struct State {
 
     void perform(const Move &move) {
         if (move.card != Move::null) {
-            auto c = DrawCard(current().hand.cards, move.card);
+            auto c = current().hand.draw(move.card);
             auto &card = Card::Get(c);
             handleAction(move);
             playCard(move, card);

@@ -6,7 +6,7 @@
 #include <map>
 #include <vector>
 
-using CardRef = uint8_t;
+using CardRef = uint16_t;
 
 constexpr CardRef NUM_CARDS = 198;
 
@@ -21,8 +21,6 @@ struct Card {
     ArgType  arg_type;
     int      face_value;
     int      inverted_value;
-    //bool is_uber?
-    //bool action_optional?
 
     std::string label;
 
