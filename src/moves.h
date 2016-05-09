@@ -24,6 +24,7 @@ inline std::string to_string(const Move &m, const Player &player) {
 
 struct Moves {
     std::vector<Move> moves;
+    std::vector<Move::Ptr> allocated;
     const State &state;
     const Player &player;
     uint64_t exposed_char;
@@ -32,9 +33,45 @@ struct Moves {
 
     Moves(const State &s) : state(s), player(s.current()) {
         TRACE();
-        moves.reserve(48);
+        moves.reserve(16);
         findMoves();
     }
+
+    ~Moves() {
+        TRACE();
+        for (auto p : allocated) {
+            delete p;
+        }
+    }
+
+    void add(const Move&& m) {
+        moves.emplace_back(m);
+    }
+
+    void add(Action a,
+             size_t i=Move::null,
+             size_t arg=Move::null,
+             Move::Ptr next=nullptr)
+    {
+        TRACE();
+        assert(i <= 0xFF);
+        assert(arg <= 0xFF);
+        moves.emplace_back(Move {a, uint8_t(i), uint8_t(arg), next});
+    }
+
+    Move::Ptr alloc(Action a,
+                    size_t i=Move::null,
+                    size_t arg=Move::null,
+                    Move::Ptr next=nullptr)
+    {
+        TRACE();
+        assert(i <= 0xFF);
+        assert(arg <= 0xFF);
+        auto *p = new Move {a, uint8_t(i), uint8_t(arg), next};
+        allocated.push_back(p);
+        return p;
+    }
+
 
     std::shared_ptr<Move> findNextAction(size_t, const Card &card) {
         TRACE();
@@ -107,19 +144,6 @@ struct Moves {
             ERROR("unhandled: {}", to_string(card));
             break;
         }
-    }
-
-    void add(const Move&& m) {
-        moves.emplace_back(m);
-    }
-
-    void add(Action a,
-             size_t i=Move::null,
-             size_t arg=Move::null,
-             std::shared_ptr<Move> next=nullptr)
-    {
-        TRACE();
-        moves.emplace_back(Move(a, i, arg, next));
     }
 
     void addConcede() { TRACE(); add(Move::Concede()); }
@@ -261,6 +285,27 @@ struct Moves {
         }
     }
 
+    void checkCard(size_t i, CardRef c) {
+        const auto &card = Card::Get(c);
+        if (canPlayCard(card)) {
+            findCardMoves(i, card);
+        }
+    }
+
+    void iterateCards(size_t &i, const Cards &cards) {
+        for (const auto c : cards) {
+            checkCard(i, c);
+            ++i;
+        }
+    }
+
+    void iterateHand() {
+        size_t i = 0;
+        const auto &hand = player.hand;
+        iterateCards(i, hand.characters);
+        iterateCards(i, hand.skills);
+    }
+
     void findMoves() {
         TRACE();
         std::tie(exposed_char,
@@ -274,22 +319,7 @@ struct Moves {
             return;
         }
 
-        size_t i = 0;
-        const auto &hand = player.hand;
-        for (const auto c : hand.characters) {
-            const auto &card = Card::Get(c);
-            if (canPlayCard(card)) {
-                findCardMoves(i, card);
-            }
-            ++i;
-        }
-        for (const auto c : hand.skills) {
-            const auto &card = Card::Get(c);
-            if (canPlayCard(card)) {
-                findCardMoves(i, card);
-            }
-            ++i;
-        }
+        iterateHand();
 
         add(Move::Pass());
         add(Move::Concede());

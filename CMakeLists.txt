@@ -4,6 +4,8 @@ project(monkey)
 set(CMAKE_BUILD_TYPE RELEASE)
 set(CMAKE_CXX_FLAGS "-pipe -Wall -std=c++14 -march=native -fcolor-diagnostics")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
+
+# Passing -DNDEBUG only gets about a 4% increase
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 include_directories(

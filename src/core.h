@@ -4,13 +4,13 @@
 
 extern void Initialize();
 
-enum class Affinity {
+enum class Affinity : uint8_t {
     NONE,
     MONK,
     CLAN,
 };
 
-enum CardType {
+enum CardType : uint8_t {
     CHARACTER,
     STYLE,
     WEAPON,
@@ -18,7 +18,7 @@ enum CardType {
     EVENT,
 };
 
-enum class Special {
+enum class Special : uint8_t {
     NONE,
     IMMUNE,
     DOUBLE_STYLES,
@@ -30,7 +30,7 @@ enum class Special {
     NO_WEAPONS
 };
 
-enum class Action {
+enum class Action : uint8_t {
     // action               // arg_type                 next action
     NONE,                   // -                        -
     PASS,                   // -                        -
@@ -70,7 +70,7 @@ enum class Action {
     E_INVERT_VALUE,
 };
 
-enum class ArgType {
+enum class ArgType : uint8_t {
     NONE,                 // n/a
     RECV_STYLE,           // a visible character accepting styles
     RECV_WEAPON,          // a visible character accepting weapons

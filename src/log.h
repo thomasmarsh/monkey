@@ -16,8 +16,8 @@ inline std::string LogBasename(const std::string &path) {
         spd::get("console")->fn(fmt.c_str(), LogBasename(__FILE__), __LINE__, ##__VA_ARGS__); \
     } while (0)
 
-#define LOG(...) BASE_LOG(info, ##__VA_ARGS__)
-#define WARN(...) BASE_LOG(warn, ##__VA_ARGS__)
+#define LOG(...) //BASE_LOG(info, ##__VA_ARGS__)
+#define WARN(...) //BASE_LOG(warn, ##__VA_ARGS__)
 //#define DLOG(...) BASE_LOG(debug, ##__VA_ARGS__)
 #define DLOG(...)
 
