@@ -12,19 +12,16 @@ struct Move {
 
     static constexpr auto null = size_t(-1);
 
-    Move(Action a=Action::NONE,
-         size_t c=null,
-         size_t g=null,
-         const std::shared_ptr<Move> n=nullptr)
+    Move(Action a, size_t c, size_t g, const std::shared_ptr<Move> n)
     : action(a)
     , card(c)
     , arg(g)
     , next(n)
     {}
 
-    static Move Null()    { return {Action::NONE}; }
-    static Move Concede() { return {Action::CONCEDE}; }
-    static Move Pass()    { return {Action::PASS}; }
+    static Move Null()    { return Move(Action::NONE, null, null, nullptr); }
+    static Move Concede() { return Move(Action::CONCEDE, null, null, nullptr); }
+    static Move Pass()    { return Move(Action::PASS, null, null, nullptr); }
 
     bool isNull() const {
         return action == Action::NONE && card == null;

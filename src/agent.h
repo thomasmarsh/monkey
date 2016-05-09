@@ -16,7 +16,7 @@ struct RandomAgent : Agent {
         assert(!moves.moves.empty());
         auto move = moves.moves[urand(moves.moves.size())];
         if (move.action == Action::CONCEDE) {
-            return {Action::PASS, 0, 0};
+            return Move::Pass();
         }
         return move;
     }

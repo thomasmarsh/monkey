@@ -43,9 +43,9 @@ int main() {
     auto console = spd::stdout_logger_mt("console", true);
     spd::set_pattern("%H:%M:%S.%e%v");
 
-    //SET_LOG_LEVEL(warn);
+    SET_LOG_LEVEL(trace);
     Initialize();
-    for (int i=0; i < 10000; ++i) {
+    for (int i=0; i < 1; ++i) {
         Play();
     }
 }

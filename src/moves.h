@@ -22,17 +22,6 @@ inline std::string to_string(const Move &m, const Player &player) {
                            : std::string("null"));
 }
 
-
-#if 0
-#define TRACE() \
-    struct _trace {\
-        _trace() { LOG("ENTER: {}", __PRETTY_FUNCTION__); } \
-        ~_trace() { LOG("LEAVE: {}", __PRETTY_FUNCTION__); } \
-    } _tmp_##__LINE__;
-#else
-#define TRACE()
-#endif
-
 struct Moves {
     std::vector<Move> moves;
     const State &state;
@@ -63,7 +52,7 @@ struct Moves {
                       to_string(card.type),
                       to_string(card));
             }
-            add(Move(card.action, i));
+            add(card.action, i);
             break;
         case ArgType::RECV_STYLE:
             assert(card.type == STYLE);
@@ -79,15 +68,15 @@ struct Moves {
             break;
         case ArgType::EXPOSED_CHAR:
             count = maskedMoves(exposed_char, i, card);
-            if (count == 0 && card.type == CHARACTER) { add(Move(Action::NONE, i)); }
+            if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
             break;
         case ArgType::EXPOSED_STYLE:
             count = maskedMoves(exposed_style, i, card);
-            if (count == 0 && card.type == CHARACTER) { add(Move(Action::NONE, i)); }
+            if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
             break;
         case ArgType::EXPOSED_WEAPON:
             count = maskedMoves(exposed_weapon, i, card);
-            if (count == 0 && card.type == CHARACTER) { add(Move(Action::NONE, i)); }
+            if (count == 0 && card.type == CHARACTER) { add(Action::NONE, i); }
             break;
         case ArgType::VISIBLE_CHAR_OR_HOLD:
             visibleOrHoldMoves(i, card);
@@ -120,9 +109,17 @@ struct Moves {
         }
     }
 
-    void add(const Move&& move) {
+    void add(const Move&& m) {
+        moves.emplace_back(m);
+    }
+
+    void add(Action a,
+             size_t i=Move::null,
+             size_t arg=Move::null,
+             std::shared_ptr<Move> next=nullptr)
+    {
         TRACE();
-        moves.emplace_back(move);
+        moves.emplace_back(Move(a, i, arg, next));
     }
 
     void addConcede() { TRACE(); add(Move::Concede()); }
@@ -161,7 +158,7 @@ struct Moves {
         TRACE();
         size_t count = 0;
         for (size_t c : EachBit(mask)) {
-            add(Move(card.action, i, c));
+            add(card.action, i, c);
             ++count;
         }
         return count;
@@ -173,11 +170,11 @@ struct Moves {
         size_t x = 0;
         auto n = player.visible.num_characters;
         for (; x < n; ++x) {
-            add(Move(card.action, i, x));
+            add(card.action, i, x);
             ++count;
         }
         // The last move (x > num chars) indicates a hold.
-        add(Move(card.action, i, x));
+        add(card.action, i, x);
         return count+1;
     }
 
@@ -185,7 +182,7 @@ struct Moves {
         TRACE();
         for (size_t p=0; p < state.players.size(); ++p) {
             if (p != player.id) {
-                add(Move(card.action, i, p));
+                add(card.action, i, p);
             }
         }
     }
@@ -195,7 +192,7 @@ struct Moves {
         for (size_t p=0; p < state.players.size(); ++p) {
             if (p != player.id) {
                 if (!state.players[p].hand.empty()) {
-                    add(Move(card.action, i, p));
+                    add(card.action, i, p);
                 }
             }
         }
@@ -206,9 +203,9 @@ struct Moves {
         for (size_t c=0; c < player.hand.size(); ++c) {
             // Need to be careful about the current card.
             if (c < i) {
-                add(Move(card.action, i, c));
+                add(card.action, i, c);
             } else if (c > i) {
-                add(Move(card.action, i, c-1));
+                add(card.action, i, c-1);
             }
         }
     }
@@ -216,8 +213,8 @@ struct Moves {
     void drawPileMoves(size_t i, const Card &card) {
         TRACE();
         // 0 = characters, 1 = skills
-        add(Move(card.action, i, 0));
-        add(Move(card.action, i, 1));
+        add(card.action, i, 0);
+        add(card.action, i, 1);
     }
 
     void discardTwo(size_t i) {
@@ -229,9 +226,9 @@ struct Moves {
         for (size_t c=0; c < player.hand.size(); ++c) {
             // Need to be careful about the current card.
             if (c < i) {
-                add(Move(Action::DISCARD_ONE, Move::null, c));
+                add(Action::DISCARD_ONE, Move::null, c);
             } else if (c > i) {
-                add(Move(Action::DISCARD_ONE, Move::null, c-1));
+                add(Action::DISCARD_ONE, Move::null, c-1);
             }
         }
 #if 0
