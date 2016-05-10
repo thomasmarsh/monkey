@@ -192,7 +192,7 @@
         "action": "PLAY_CHARACTER",
         "affinity": "MONK",
         "special": "NONE",
-        "arg_type": "NONE",
+        "arg_type": "HAND",
         "description": "A character who brings another character into the field with him. When this card is played, the player can play another character from their hand.",
         "quantity": 1,
         "type": "CHARACTER",

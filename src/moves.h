@@ -9,20 +9,21 @@
 #include <cassert>
 
 inline std::string to_string(const Move &m, const Player &player) {
-    auto s = fmt::format("{{ {} {{ {} }} {} {} }}", to_string(m.action),
+    auto s = fmt::format("{{ {} {{ {} }} {} }}", to_string(m.action),
                          m.card == Move::null
                              ? std::string("null")
                              : to_string(Card::Get(player.hand.at(m.card))),
                          m.arg == Move::null
                              ? std::string("null")
-                             : std::to_string(m.arg),
-                         m.next
-                             ? to_string(*m.next, player)
-                             : std::string("null"));
+                             : std::to_string(m.arg));
 
+    // TODO: repair the print of chained moves
+    //auto hand = player.hand;
+    //hand.draw(m.card);
     auto *move = m.next;
     while (move) {
         s += " " + to_string(*move, player);
+        //hand.draw(move->card);
         move = move->next;
     }
     return s;
@@ -43,6 +44,17 @@ struct Moves {
         TRACE();
         moves.reserve(16);
         findMoves();
+    }
+
+    // Find all moves for card i in hand.
+    Moves(const State &s, size_t i)
+    : state(s)
+    , player(s.current())
+    , exposed(player.id, s.players)
+    {
+        TRACE();
+        moves.reserve(16);
+        checkCard(i, player.hand.at(i));
     }
 
     ~Moves() {
@@ -184,7 +196,7 @@ struct Moves {
         for (size_t j=(i-nc)+1; j < ns; ++j) {
             auto &c = Card::Get(skills[j]);
             if (c.type == STYLE) {
-                // We need to add back `nc` to restore it to a character relative index.
+                // We need to add back `nc` to restore it from a skill- to a hand relative index.
                 matches.push_back(j + nc);
             }
         }
@@ -253,6 +265,38 @@ struct Moves {
     }
 
     void handMoves(size_t i, const Card &card) {
+        TRACE();
+        if (card.action == Action::PLAY_CHARACTER) {
+            charHandMoves(i, card);
+        } else {
+            allHandMoves(i, card);
+        }
+    }
+
+    void addDoubleChar(State &clone, size_t i, const Card &c1, size_t j, CardRef c) {
+        Moves m2(clone, j);
+        for (const auto &m : m2.moves) {
+            add(Action::NONE, i, Move::null,
+                alloc(m.action, m.card, m.arg));
+        }
+    }
+
+    void charHandMoves(size_t i, const Card &card) {
+        LOG("-- begin evaluation --");
+        auto clone = state;
+        clone.processMove(Move{Action::NONE, uint8_t(i), Move::null, nullptr});
+        for (size_t j=0; j < player.hand.characters.size(); ++j) {
+            auto c = player.hand.characters[j];
+            if (j < i) {
+                addDoubleChar(clone, i, card, j, c);
+            } else if (j > i) {
+                addDoubleChar(clone, i, card, j-1, c);
+            }
+        }
+        LOG("-- end evaluation --");
+    }
+
+    void allHandMoves(size_t i, const Card &card) {
         TRACE();
         for (size_t c=0; c < player.hand.size(); ++c) {
             // Need to be careful about the current card.
@@ -343,5 +387,12 @@ struct Moves {
 
         add(Move::Pass());
         add(Move::Concede());
+    }
+
+    void print() {
+        LOG("Moves:");
+        for (auto &m : moves) {
+            LOG("    {}", to_string(m, player));
+        }
     }
 };

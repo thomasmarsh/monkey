@@ -23,7 +23,7 @@ struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
 
     MCAgent(size_t l=MC_LEN)
     : mc_len(l)
-    , concurrency(std::thread::hardware_concurrency())
+    , concurrency(1) //std::thread::hardware_concurrency())
     {
     }
 
@@ -31,6 +31,9 @@ struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
         // Choose a move and perform it.
         size_t i = urand(m.moves.size());
         s.perform(&m.moves[i]);
+        if (s.challenge.round.finished()) {
+            s.challenge.round.reset();
+        }
         return i;
     }
 

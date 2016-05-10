@@ -11,7 +11,6 @@ struct State {
     std::vector<CardRef> events;
     std::vector<Player>  players;
     Challenge            challenge;
-    uint8_t              challenge_num:4;
 
     State(size_t num_players)
     : deck(std::make_shared<Deck>())
@@ -22,8 +21,19 @@ struct State {
         }
     }
 
+    State(const State &rhs)
+    : deck(rhs.deck->clone())
+    , events(rhs.events)
+    , players(rhs.players)
+    , challenge(rhs.challenge)
+    {
+        assert(*deck == *rhs.deck);
+        assert(events == rhs.events);
+    }
+
     void init() {
         deck->populate();
+        deck->shuffle();
         deck->print();
         deal();
         drawEvent();
