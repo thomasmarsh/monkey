@@ -45,8 +45,6 @@ inline std::vector<IndexList> DoubleIndices(size_t n) {
     ERROR("n too high");
 }
 
-// ---------------------------------------------------------------------------
-
 template <typename T, typename V>
 inline bool Contains(const T &c, const V &v) {
     return std::find(std::begin(c), std::end(c), v) != std::end(c);

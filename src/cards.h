@@ -26,6 +26,7 @@ struct Card {
 
     static const Card& Get(CardRef card);
 
+#ifndef NO_DEBUG
     void debug() const {
         DLOG("Card:");
         DLOG("    id             = {}", id);
@@ -39,6 +40,7 @@ struct Card {
         DLOG("    face_value     = {}", face_value);
         DLOG("    inverted_value = {}", inverted_value);
     }
+#endif
 };
 
 extern std::string ActionDescription(Action a);

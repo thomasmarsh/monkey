@@ -30,6 +30,7 @@ struct Player {
         return hand.size() + visible.size();
     }
 
+#ifndef NO_DEBUG
     void debug() const {
         DLOG("PLAYER:");
         DLOG("id              = {}", id);
@@ -40,6 +41,7 @@ struct Player {
         hand.debug();
         visible.debug();
     }
+#endif
 
     struct Aggregate {
         uint64_t exposed_char;

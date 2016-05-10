@@ -47,6 +47,7 @@ struct PlayerHand {
         return draw(urand(size()));
     }
 
+#ifndef NO_DEBUG
     void debug() const {
         DLOG("Hand:");
         DLOG("    CHARACTERS");
@@ -58,4 +59,5 @@ struct PlayerHand {
             DLOG("    {} {}", c, to_string(Card::Get(c)));
         }
     }
+#endif
 };

@@ -25,6 +25,7 @@ struct PlayerVisible {
             return 1 + styles.size() + weapons.size();
         }
 
+#ifndef NO_DEBUG
         void debug() const {
             DLOG("    Character: {}", to_string(Card::Get(card)));
             DLOG("        immune      = {}", immune);
@@ -36,6 +37,7 @@ struct PlayerVisible {
                 DLOG("        {}", to_string(Card::Get(c)));
             }
         }
+#endif
     };
 
     size_t                 num_characters:4;
@@ -58,6 +60,7 @@ struct PlayerVisible {
     {
     }
 
+#ifndef NO_DEBUG
     void debug() const {
         DLOG("Visible:");
         DLOG("    num_characters = {}", num_characters);
@@ -74,6 +77,7 @@ struct PlayerVisible {
             c.debug();
         }
     }
+#endif
 
     void reset() {
         characters.clear();
@@ -149,9 +153,6 @@ struct PlayerVisible {
         auto i = num_characters;
         ++num_characters;
 
-        // TODO: sometimes a mismatch here
-        debug();
-        card.debug();
         assert(num_characters == characters.size());
         assert(num_characters <= sizeof(exposed_char)*8);
         assert(num_characters <= 10);

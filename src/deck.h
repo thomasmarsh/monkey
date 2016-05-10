@@ -50,10 +50,7 @@ struct Deck {
     DeckCardSet draw;
     DeckCardSet discard;
 
-    Deck() {
-        populate();
-        shuffle();
-    }
+    Deck() {}
 
     Deck::Ptr clone() const {
         auto d = std::make_shared<Deck>();

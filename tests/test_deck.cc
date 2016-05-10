@@ -6,6 +6,7 @@
 SCENARIO("deck can be manipulated safely", "[deck]") {
     GIVEN("an initial deck") {
         Deck d;
+        d.populate();
 
         REQUIRE(d.size() == NUM_CARDS);
         REQUIRE(d.discard.empty());

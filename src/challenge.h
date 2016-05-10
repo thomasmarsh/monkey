@@ -29,6 +29,7 @@ struct Challenge {
     size_t current()  const { return round.current; }
     bool   finished() const { return round.challengeFinished(); }
 
+#ifndef NO_DEBUG
     void debug() const {
         DLOG("Challenge:");
         DLOG("    round_num    = {}", (uint8_t)round_num);
@@ -40,4 +41,5 @@ struct Challenge {
         DLOG("    finished()   = {}", finished());
         round.debug();
     }
+#endif
 };

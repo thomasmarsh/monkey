@@ -14,7 +14,7 @@ struct RandomAgent : Agent {
     void move(State &s) const override {
         Moves moves(s);
         assert(!moves.moves.empty());
-        auto move = moves.moves[urand(moves.moves.size())];
+        auto &move = moves.moves[urand(moves.moves.size())];
         if (move.action == Action::CONCEDE) {
             move = Move::Pass();
         }

@@ -80,6 +80,7 @@ struct Round {
         return !pending || challengeFinished();
     }
 
+#ifndef NO_DEBUG
     void debug() const {
         DLOG("Round:");
         DLOG("    num_players        = {}", num_players);
@@ -91,4 +92,5 @@ struct Round {
         DLOG("    challenge_finished = {}", challenge_finished);
         DLOG("    finished()         = {}", finished());
     }
+#endif
 };

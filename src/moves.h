@@ -81,7 +81,6 @@ struct Moves {
         return p;
     }
 
-
     std::shared_ptr<Move> findNextAction(size_t, const Card &card) {
         TRACE();
         WARN("unhandled");
@@ -172,7 +171,7 @@ struct Moves {
         }
     }
 
-    std::vector<size_t> matchingSkillsFromIndex(size_t i, const Card &card) {
+    std::vector<size_t> findStylesFromIndex(size_t i, const Card &card) {
         auto nc  = player.hand.characters.size();
         auto &skills = player.hand.skills;
 
@@ -184,8 +183,7 @@ struct Moves {
         auto ns = skills.size();
         for (size_t j=(i-nc)+1; j < ns; ++j) {
             auto &c = Card::Get(skills[j]);
-            // We could just check for `card.type == STYLE`, but this is more general.
-            if (c.action == card.action && c.arg_type == card.arg_type) {
+            if (c.type == STYLE) {
                 // We need to add back `nc` to restore it to a character relative index.
                 matches.push_back(j + nc);
             }
@@ -201,11 +199,11 @@ struct Moves {
             return;
         }
 
-        auto matches = matchingSkillsFromIndex(i, card);
+        auto styles = findStylesFromIndex(i, card);
 
         // No matches found means we only have one more card of this type in the hand after the
         // start position.
-        if (matches.empty()) {
+        if (styles.empty()) {
             // NOTE: if taking of the XOR in the arg_type dispatch, then remove this search here.
             maskedMoves(mask, i, card);
             return;
@@ -214,7 +212,7 @@ struct Moves {
         // Finally, iterate over all the cards in hand that accept double styles.
         for (size_t c : EachBit(mask)) {
             // For each other card in hand
-            for (auto j : matches) {
+            for (auto j : styles) {
                 assert(j > i);
                 add(card.action, j, c,
                     alloc(card.action, i, c));
@@ -226,6 +224,7 @@ struct Moves {
         TRACE();
         size_t x = 0;
         auto n = player.visible.num_characters;
+        assert(n == player.visible.characters.size());
         for (; x < n; ++x) {
             add(card.action, i, x);
         }

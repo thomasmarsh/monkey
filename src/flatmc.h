@@ -2,9 +2,15 @@
 
 #include "agent.h"
 
-struct MCPlayer : Player, enable_shared_from_this<MCPlayer> {
-    string name() const override { return "MCPlayer"; }
-    const size_t mcLen;
+#include <thread>
+#include <map>
+
+struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
+    static constexpr size_t MC_LEN = 70;
+
+    std::string name() const override { return "MCPlayer"; }
+
+    const size_t mc_len;
     const size_t concurrency;
 
     struct MoveStat {
@@ -12,112 +18,111 @@ struct MCPlayer : Player, enable_shared_from_this<MCPlayer> {
         int visits;
     };
 
-    using MoveStats = map<size_t, MoveStat>;
-    mutable mutex mtx;
+    using MoveStats = std::map<size_t, MoveStat>;
+    mutable std::mutex mtx;
 
-    MCPlayer(size_t l)
-    : mcLen(l)
-    , concurrency(thread::hardware_concurrency())
+    MCAgent(size_t l=MC_LEN)
+    : mc_len(l)
+    , concurrency(std::thread::hardware_concurrency())
     {
     }
 
-    void searchOne(MoveCount &mc, MoveStats &stats) const
+    size_t randomMove(const Moves &m, State &s) const {
+        // Choose a move and perform it.
+        size_t i = urand(m.moves.size());
+        s.perform(&m.moves[i]);
+        return i;
+    }
+
+    void finishGame(State &s) const {
+        // Play remainder of challenges
+        while (!s.gameOver()) {
+            Moves m(s);
+            randomMove(m, s);
+        }
+    }
+
+    void searchOne(const Moves &m, MoveStats &stats) const
     {
         // Clone with all random players.
-        auto g2 = mc.state->clone<RandomPlayer>();
-        g2->randomizeHiddenState(id);
+        auto clone = m.state;
+        clone.randomizeHiddenState();
+        auto p = clone.current().id;
+        auto i = randomMove(m, clone);
 
-        // Choose a move and perform it.
-        auto index = urand(mc.count);
-        auto m = mc.move(index);
-        g2->doMove(id, m);
-
-        g2->round.checkState(id, m);
-
-        // Play remainder of challenges
-        g2->finishGame();
-
-        updateStats(stats, g2, index);
+        finishGame(clone);
+        updateStats(stats, clone, p, i);
     }
 
 
-    void updateStats(MoveStats &stats, GameState::Ptr g2, size_t index) const {
+    void updateStats(MoveStats &stats, const State &s, size_t p, size_t index) const {
         // Find winner, ties considered losses
-        int best = id;
-        auto p = g2->players[id];
-        int high = p->score;
-        for (int j=0; j < g2->players.size(); ++j) {
-            if (j != id) {
-                if (g2->players[j]->score >= high) {
+        auto best = p;
+        int high = s.players[p].score;
+        for (int j=0; j < s.players.size(); ++j) {
+            if (j != p) {
+                if (s.players[j].score >= high) {
                     best = j;
-                    high = g2->players[j]->score;
+                    high = s.players[j].score;
                 }
             }
         }
 
         // Associate win rate with this move
         {
-            lock_guard<mutex> lock(mtx);
-            auto &s = stats[index];
-            s.scores += p->score;
-            ++s.visits;
+            std::lock_guard<std::mutex> lock(mtx);
+            auto &st = stats[index];
+            st.scores += s.players[p].score;
+            ++st.visits;
         }
     }
 
     size_t findBest(MoveStats &stats) const {
-        int highScore = 0;
-        size_t bestScore = 0;
+        int high = 0;
+        size_t best = 0;
 
         size_t index;
         MoveStat s;
         for (auto p : stats) {
-            tie(index, s) = p;
+            std::tie(index, s) = p;
             
-            int avgScore = s.scores/(float)s.visits;
+            int avg = s.scores/(float)s.visits;
 
             // Use >= so we skip over concede if it ties with something else
-            if (avgScore >= highScore) {
-                highScore = avgScore;
-                bestScore = index;
+            if (avg >= high) {
+                high = avg;
+                best = index;
             }
         }
-        return bestScore;
+        return best;
     }
 
-    Move move(GameState::Ptr gs) override
+    void move(State &s) const override
     {
-        LogLock lock;
-
-        auto mc = MoveCount(gs.get());
-        if (mc.count == 0) {
-            return Move::NullMove();
-        }
+        Moves m(s);
 
         // If only one move, take that one without searching.
-        if (mc.count == 1) {
-            return mc.move(0);
+        if (m.moves.size() == 1) {
+            s.perform(&m.moves[0]);
+            return;
         }
+
         MoveStats stats;
 
-        size_t samples = mcLen*mc.count / concurrency;
+        size_t samples = mc_len * m.moves.size() / concurrency;
         const auto self = shared_from_this();
-        vector<thread> t(concurrency);
+        std::vector<std::thread> t(concurrency);
         for (size_t i=0; i < concurrency; ++i) {
-            t[i] = thread([self,
-                           mc,
-                           &stats,
-                           samples]
-            {
-                auto mcCopy = mc;
-                for (int j=0; j < samples; ++j) {
-                    self->searchOne(mcCopy, stats);
-                }
-            });
+            t[i] = std::thread([self, &m, &stats, samples] {
+                                   for (int j=0; j < samples; ++j) {
+                                       self->searchOne(m, stats);
+                                   }
+                               });
         }
         for (size_t i=0; i < concurrency; ++i) {
             t[i].join();
         }
 
-        return mc.move(findBest(stats));
+        s.perform(&m.moves[findBest(stats)]);
     }
 };

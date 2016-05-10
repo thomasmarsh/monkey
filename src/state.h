@@ -4,6 +4,7 @@
 #include "challenge.h"
 #include "player.h"
 #include "move.h"
+#include "util.h"
 
 struct State {
     Deck::Ptr            deck;
@@ -16,14 +17,19 @@ struct State {
     : deck(std::make_shared<Deck>())
     , challenge(num_players)
     {
-        deck->print();
         for (size_t i=0; i < num_players; ++i) {
             players.emplace_back(Player(i));
         }
+    }
+
+    void init() {
+        deck->populate();
+        deck->print();
         deal();
         drawEvent();
     }
 
+#ifndef NO_DEBUG
     void debug() const {
         for (int i=0; i < players.size(); ++i) {
             DLOG("PLAYER {}", i);
@@ -31,6 +37,7 @@ struct State {
         }
         challenge.debug();
     }
+#endif
 
     // State-wide card count
     size_t size() const {
@@ -60,6 +67,7 @@ struct State {
         assert(!challenge.round.game_over);
         challenge.step();
         if (challenge.finished()) {
+            score();
             checkGameOver();
         }
     }
@@ -68,7 +76,6 @@ struct State {
         if (!challenge.round.game_over) {
             discardVisible();
             challenge.reset();
-            validateCards();
             deal();
             drawEvent();
         }
@@ -76,6 +83,40 @@ struct State {
 
     const Player &current() const { return players[challenge.round.current]; }
           Player &current()       { return players[challenge.round.current]; }
+
+    void score() {
+        size_t count = 0;
+        size_t best = 0;
+        int high = 0;
+        for (int i = 0; i < players.size(); ++i) {
+            // Ignoring conceded players
+            if (!challenge.round.conceded[i]) {
+                auto value = players[i].visible.played_value;
+                if (value > high) {
+                    count = 0;
+                    best = i;
+                    high = value;
+                } else if (value == high) {
+                    ++count;
+                }
+            }
+        }
+        if (count > 0) {
+            LOG("tie - no points for anyone");
+        } else {
+            auto points = players[best].visible.played_points;
+            LOG("player {} is the winner with {} points", best, points);
+            players[best].score += points;
+        }
+    }
+
+    void printScore() {
+        auto s = std::to_string(players[0].score);
+        for (size_t i=1; i < players.size(); ++i) {
+            s += "/" + std::to_string(players[i].score);
+        }
+        LOG("Score: {}", s);
+    }
 
     void discardVisible() {
         for (auto &p : players) {
@@ -113,6 +154,59 @@ struct State {
         }
     }
 
+    // Randomize the hidden cards with respect to current player.
+    void randomizeHiddenState() {
+        TRACE();
+        auto hidden = std::make_shared<Deck>();
+
+        const auto i = current().id;
+
+        // Copy all unseen cards (draw pile) from the main to the hidden deck.
+        CopyCards(deck->draw.characters, hidden->draw.characters);
+        CopyCards(deck->draw.skills,  hidden->draw.skills);
+
+        // Copy all cards from players to hidden deck.
+        for (auto &p : players) {
+            if (p.id != i) {
+                CopyCards(p.hand.characters, hidden->draw.characters);
+                CopyCards(p.hand.skills,     hidden->draw.skills);
+            }
+        }
+
+        // Shuffle cards. Now we can redistribute from the deck
+        hidden->draw.shuffle();
+
+        // Shuffle events directly since we didn't copy them.
+        Shuffle(deck->draw.events);
+
+        // Distribute cards to the players
+        for (auto &p : players) {
+            if (p.id != i) {
+                auto &hand = p.hand;
+                // Remember the size of the hand.
+                auto nc = hand.characters.size();
+                auto nr = hand.skills.size();
+
+                // Now it is safe to clear the hand and redistribute.
+                hand.reset();
+                for (int j=0; j < nc; ++j) {
+                    auto c = hidden->drawCharacter();
+                    hand.characters.push_back(c);
+                }
+                for (int j=0; j < nr; ++j) {
+                    auto c = hidden->drawSkill();
+                    hand.insert(c);
+                }
+            }
+        }
+
+        // Move the remaining deck
+        deck->draw.characters = std::move(hidden->draw.characters);
+        deck->draw.skills  = std::move(hidden->draw.skills);
+    }
+
+#pragma mark - Event Handling
+
     void drawEvent() {
         auto c = deck->drawEvent();
         events.push_back(c);
@@ -120,8 +214,6 @@ struct State {
         LOG("<event:{}>", to_string(card));
         handleEvent(card);
     }
-
-#pragma mark - Event Handling
 
     void handleEvent(const Card &card) {
         switch (card.action) {

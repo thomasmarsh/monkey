@@ -2,46 +2,60 @@
 
 #include "agent.h"
 
-struct NaivePlayer : Agent {
-    string name() const override { return "Naive"; }
+struct NaiveAgent : Agent {
+    std::string name() const override { return "Naive"; }
 
-    Affinity bestSide() {
+    int cardValue(const Card &c, const State &s) const {
+        if (s.challenge.invert_value) {
+            return c.inverted_value;
+        }
+        return c.face_value;
+    }
+
+    Affinity bestSide(const State &s) const {
         int clan = 0;
         int monk = 0;
-        for (auto c : hand.characters) {
-            const auto &card = CARD_TABLE[c];
+        for (auto c : s.current().hand.characters) {
+            const auto &card = Card::Get(c);
             switch (card.affinity) {
-            case CLAN: clan += card.value; break;
-            case MONK: monk += card.value; break;
-            case NONE: break;
+            case Affinity::CLAN: clan += cardValue(card, s); break;
+            case Affinity::MONK: monk += cardValue(card, s); break;
+            case Affinity::NONE: break;
             }
         }
 
-        if      (clan > monk) { return CLAN; }
-        else if (monk > clan) { return MONK; }
+        if      (clan > monk) { return Affinity::CLAN; }
+        else if (monk > clan) { return Affinity::MONK; }
 
-        return NONE;
+        return Affinity::NONE;
     }
 
-    Move selectMove(GameState::Ptr state) {
-        auto moves = state->getCurrentMoveList();
+    int valueForMove(const Move &m, const State &s) const {
+        if (m.card == Move::null) {
+            return 0;
+        }
+        return cardValue(Card::Get(m.card), s);
+    }
 
-        vector<int> values;
-        values.reserve(moves.size());
+    void move(State &s) const override {
+        Moves moves(s);
+
+        std::vector<int> values;
+        values.reserve(moves.moves.size());
 
         size_t sum = 0;
-        for (const auto &m : moves) {
-            auto v = 1+valueForMove(m, state->flags);
+        for (const auto &m : moves.moves) {
+            auto v = 1+valueForMove(m, s);
             sum += v;
             values.push_back(v);
         }
 
         auto choice = urand(sum);
-        auto move = Move::NullMove();
+        auto move = Move::Pass();
 
         sum = 0;
         int i = 0;
-        for (const auto &m : moves) {
+        for (const auto &m : moves.moves) {
             sum += values[i];
             ++i;
             if (sum >= choice) {
@@ -49,11 +63,6 @@ struct NaivePlayer : Agent {
                 break;
             }
         }
-        return move;
-    }
-
-    Move move(GameState::Ptr state) override {
-        TRACE();
-        return selectMove(state);
+        s.perform(&move);
     }
 };

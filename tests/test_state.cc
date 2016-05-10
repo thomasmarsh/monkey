@@ -5,11 +5,13 @@
 
 TEST_CASE("construct a state", "[state]") {
     State s(4);
+    s.init();
     REQUIRE(s.size() == NUM_CARDS);
 }
 
 TEST_CASE("perform a move", "[state]") {
     State s(4);
+    s.init();
     Moves m(s);
     REQUIRE(!m.moves.empty());
     s.perform(&m.moves[0]);
@@ -17,6 +19,7 @@ TEST_CASE("perform a move", "[state]") {
 
 TEST_CASE("perform a round", "[state]") {
     State s(4);
+    s.init();
 
     for (int i=0; i < 4; ++i) {
         Moves m(s);
@@ -30,6 +33,7 @@ TEST_CASE("perform a round", "[state]") {
 
 TEST_CASE("perform a challenge", "[state]") {
     State s(4);
+    s.init();
 
     size_t r = 0;
     while (!s.challenge.finished()) {
@@ -47,6 +51,7 @@ TEST_CASE("perform a challenge", "[state]") {
 
 TEST_CASE("play a game", "[state]") {
     State s(4);
+    s.init();
     size_t c = 0;
     while (!s.challenge.round.game_over) {
         LOG("");
