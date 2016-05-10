@@ -3,15 +3,15 @@
 #include "state.h"
 
 struct ViewCard {
-    size_t id;
+    CardRef card;
     int rotation;
 
-    ViewCard() : id(-1), rotation(0) {}
-    ViewCard(size_t i) : id(-1), rotation(0) { update(i); }
+    ViewCard() : card(-1), rotation(0) {}
+    ViewCard(CardRef i) : card(-1), rotation(0) { update(i); }
 
-    void update(size_t i) {
-        if (i != id) {
-            id = i;
+    void update(CardRef i) {
+        if (i != card) {
+            card = i;
             rotation = RandFloat() * 4 - 2;
         }
     }
@@ -34,8 +34,8 @@ struct ViewCharacter {
     std::vector<ViewCard> weapons;
 
     void update(const PlayerVisible::Character &c) {
-        if (c.character != character.id) {
-            character.update(c.character);
+        if (c.card != character.card) {
+            character.update(c.card);
         }
 
         ResizeVector<ViewCard>(c.styles.size(), styles);
@@ -66,7 +66,7 @@ struct ViewState {
     std::vector<ViewPlayer> players;
 
     void update(const State &state) {
-        ResizeVector<ViewPlayer>(state->players.size(), players);
+        ResizeVector<ViewPlayer>(state.players.size(), players);
 
         for (size_t i = 0; i < players.size(); ++i) {
             players[i].update(state.players[i]);

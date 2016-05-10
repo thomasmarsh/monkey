@@ -6,7 +6,10 @@
 #include "flatmc.h"
 #include "mcts.h"
 
+#include "ui.h"
+
 void Play() {
+    MonkeyChallenge mk(4);
     State s(4);
     s.init();
     size_t c = 0;

@@ -36,5 +36,5 @@ add_executable(
     tests/test_deck.cc
     tests/test_round.cc)
 
-target_link_libraries(monkey tcmalloc)
+target_link_libraries(monkey tcmalloc sfml-window sfml-graphics sfml-system)
 target_link_libraries(mtest tcmalloc)

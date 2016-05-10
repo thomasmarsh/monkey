@@ -5,20 +5,20 @@
 #include <SFML/Graphics.hpp>
 
 struct UICard {
-    shared_ptr<sf::RenderTexture> rtext;
+    std::shared_ptr<sf::RenderTexture> rtext;
 
     static constexpr size_t width = 200;
     static constexpr size_t height = width * 1.4;
 
-    UICard(const CardTableEntry &card, const sf::Font &font)
-    : rtext(make_shared<sf::RenderTexture>())
+    UICard(const Card &card, const sf::Font &font)
+    : rtext(std::make_shared<sf::RenderTexture>())
     {
 
         auto text = sf::Text();
         text.setFont(font);
-        auto s = to_string(card.value) + " " + card.label;
+        auto s = std::to_string(card.face_value) + " " + card.label;
         auto n = s.find('(');
-        if (n != string::npos) {
+        if (n != std::string::npos) {
             s.insert(n, "\n");
         }
         text.setString(s);
@@ -49,38 +49,39 @@ struct UICard {
         return rtext->getTexture();
     }
 
-    static vector<UICard> cards;
+    static std::vector<UICard> cards;
 
     static void RenderCards(const sf::Font &font) {
         cards.clear();
-        for (size_t i=0; i < CARD_TABLE_PROTO.size(); ++i) {
-            cards.emplace_back(UICard(CARD_TABLE_PROTO[i], font));
+        for (CardRef i=0; i < NUM_CARDS; ++i) {
+            cards.emplace_back(UICard(Card::Get(i), font));
         }
     }
 };
 
-vector<UICard> UICard::cards;
+std::vector<UICard> UICard::cards;
 
 // ---------------------------------------------------------------------------
 
-template <typename T>
-struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
-    using Ptr = shared_ptr<MonkeyChallenge>;
+struct MonkeyChallenge : public std::enable_shared_from_this<MonkeyChallenge> {
+    using Ptr = std::shared_ptr<MonkeyChallenge>;
 
     ViewState view_state;
-    Deck::Ptr deck;
-    GameState::Ptr state;
+    State state;
     size_t round_num;
-    thread t;
+    std::thread t;
+
+    std::mutex mtx;
+    State clone;
 
     sf::RenderWindow window;
     sf::Font font;
     sf::Texture felt_tx;
     sf::Sprite felt_sprite;
 
-    explicit MonkeyChallenge(vector<Player::Ptr> players)
-    : deck(make_shared<Deck>())
-    , state(make_shared<GameState>(deck, players))
+    explicit MonkeyChallenge(size_t players)
+    : state(players)
+    , clone(players)
 #ifdef DISPLAY_UI
     , window(sf::VideoMode(2048, 1536), "Monkey", sf::Style::Default)
 #endif
@@ -99,35 +100,34 @@ struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
                              1536 / felt_sprite.getLocalBounds().height);
 #endif
 
-        state->init();
-        deck->initialize();
+        state.init();
     }
 
-    mutex mtx;
-    ChallengeFlags flags;
-    GameState::Ptr clone;
 
     void doClone() {
-        lock_guard<mutex> lock(mtx);
-        clone = state->clone<T>();
+        std::lock_guard<std::mutex> lock(mtx);
+        clone = state;
     }
 
 
     Ptr Self() {
-        return MonkeyChallenge<T>::shared_from_this();
+        return MonkeyChallenge::shared_from_this();
     }
 
     void play() {
         TRACE();
 
         auto self = Self();
-        t = thread([self] {
+        t = std::thread([self] {
             auto f = [self] { self->doClone(); };
-            self->state->reset();
-            self->state->playGame(f);
-            self->state->deck->print_size();
-            self->state->deck->shuffle();
-            self->state->deck->print_size();
+            self->state.reset();
+            // TODO:
+#if 0
+            self->state.playGame(f);
+            self->state.deck->print_size();
+            self->state.deck->shuffle();
+            self->state.deck->print_size();
+#endif
         });
 #ifdef DISPLAY_UI
         t.detach();
@@ -151,7 +151,7 @@ struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
             window.draw(felt_sprite);
             
             {
-                lock_guard<mutex> lock(mtx);
+                std::lock_guard<std::mutex> lock(mtx);
                 view_state.update(clone);
                 renderPlayers();
             }
@@ -160,15 +160,15 @@ struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
 #endif
     }
 
-    void renderCard(int x, int y, const ViewCard &card) {
-        auto proto = CARD_TABLE[card.id].prototype;
+    void renderCard(int x, int y, const ViewCard &c) {
+        auto proto = Card::Get(c.card).prototype;
         sf::Sprite sprite;
         assert(proto < UICard::cards.size());
         sprite.setTexture(UICard::cards[proto].texture());
         auto tx = UICard::width >> 1;
         auto ty = UICard::height >> 1;
         sprite.setOrigin(tx, ty);
-        sprite.rotate(card.rotation);
+        sprite.rotate(c.rotation);
         sprite.setPosition(x+tx, y+ty);
         window.draw(sprite);
     }
@@ -203,10 +203,10 @@ struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
         }
     }
 
-    void renderScore(Player *player, int x, int y) {
+    void renderScore(const Player &p, int x, int y) {
         auto text = sf::Text();
         text.setFont(font);
-        auto s = to_string(player->visible.value(clone->flags)) + "\n" + to_string(player->score);
+        auto s = std::to_string(p.visible.played_value) + "\n" + std::to_string(p.score);
         text.setString(s);
         text.setCharacterSize(score_font_size);
         text.setColor(sf::Color::Black);
@@ -218,11 +218,11 @@ struct MonkeyChallenge : public enable_shared_from_this<MonkeyChallenge<T>> {
     void renderPlayers() {
         int y = initial_y;
         size_t i = 0;
-        for (const auto &p : state->players) {
+        for (const auto &p : state.players) {
 
             int x = initial_x;
 
-            renderScore(p.get(), 0, y);
+            renderScore(p, 0, y);
 
             for (const auto &c: view_state.players[i].characters) {
                 renderCharacter(x, y, c);
