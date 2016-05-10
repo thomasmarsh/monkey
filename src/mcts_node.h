@@ -2,10 +2,12 @@
 
 #include "util.h"
 
-template <typename M>
-struct Node : enable_shared_from_this<Node> {
-    using Ptr = shared_ptr<Node>;
-    using wPtr = weak_ptr<Node>;
+// TODO: generalize Node to Node<S, M>
+struct Node : std::enable_shared_from_this<Node> {
+    using M = Move;
+
+    using Ptr = std::shared_ptr<Node>;
+    using wPtr = std::weak_ptr<Node>;
 
     using MoveList = std::vector<M>;
 
@@ -13,13 +15,13 @@ struct Node : enable_shared_from_this<Node> {
     Cards cards;
     // The move that got us to this node. null for the root node.
     wPtr parent;
-    vector<Ptr> children;
+    std::vector<Ptr> children;
     float wins;
     size_t visits;
     size_t avails;
     int just_moved;
 
-    Node(M m, Cards c, Ptr _parent, int p)
+    Node(const M &m, Cards c, Ptr _parent, int p)
     : move(m)
     , cards(c)
     , parent(_parent)
@@ -30,7 +32,11 @@ struct Node : enable_shared_from_this<Node> {
     {
     }
 
-    void reset(M m, Cards c, Ptr _parent, int p) {
+    static Ptr New(const M &m, const Cards &c, const Ptr &parent, int p) {
+        return std::make_shared<Node>(m, c, parent, p);
+    }
+
+    void reset(const M &m, const Cards &c, const Ptr &_parent, int p) {
         TRACE();
         move = m;
         cards = c;
@@ -44,7 +50,7 @@ struct Node : enable_shared_from_this<Node> {
     Ptr self() { return this->shared_from_this(); }
 
     // Returns the elements of the legal_moves for which this node does not have children.
-    M getUntriedMoves(MoveList legal_moves) {
+    MoveList getUntriedMoves(MoveList legal_moves) {
         TRACE();
         if (legal_moves.empty()) {
             return {};
@@ -53,7 +59,7 @@ struct Node : enable_shared_from_this<Node> {
         // Find all moves for which this node *does* have children.
         MoveList tried;
         for (const auto &c : children) {
-            if (!M::IsNullMove(c->move)) {
+            if (c->move.isNull()) {
                 tried.push_back(c->move);
             }
         }
@@ -77,12 +83,12 @@ struct Node : enable_shared_from_this<Node> {
 
     // Use the UCB1 formula to select a child node, filtered by the given list
     // of legal moves.
-    Ptr selectChildUCB(GameState::Ptr &state,
+    Ptr selectChildUCB(const State &state,
                        const MoveList &legal_moves,
                        float exploration) {
         TRACE();
         // Filter the list of children by the list of legal moves.
-        vector<Ptr> legal_children;
+        std::vector<Ptr> legal_children;
         for (const auto &child : children) {
             if (Contains(legal_moves, child->move)) {
                 legal_children.push_back(child);
@@ -109,28 +115,28 @@ struct Node : enable_shared_from_this<Node> {
     // Add a new child for the move m, returning the added child node.
     Ptr addChild(M m, Cards c, int p) {
         TRACE();
-        auto n = make_shared<Node>(m, c, self(), p);
+        auto n = New(m, c, self(), p);
         children.push_back(n);
         return n;
     }
 
     // Update this node - increment the visit count by one and increase the
     // win count by the result of the terminalState for just_moved
-    void update(typename GameState::Ptr terminal) {
+    void update(const State &terminal) {
         TRACE();
         visits += 1;
         if (just_moved != -1) {
-            wins += terminal->getResult(just_moved);
+            wins += terminal.getResult(just_moved);
         }
     }
 
-    string repr() const {
+    std::string repr() const {
         return fmt::format("[w/v/a: {:4}/{:4}/{:4} p={} m={}",
                            wins, visits, avails, just_moved,
                            to_string(move));
     }
 
-    string shortRepr() const {
+    std::string shortRepr() const {
         return fmt::format("{}/{}/{}", wins, visits, avails);
     }
 
@@ -148,9 +154,9 @@ struct Node : enable_shared_from_this<Node> {
         }
     }
 
-    string indentStr(size_t indent) const {
+    std::string indentStr(size_t indent) const {
         TRACE();
-        auto s = string();
+        auto s = std::string();
         for (int i=0; i < indent; ++i) {
             s += "| ";
         }

@@ -4,14 +4,18 @@
 #include "util.h"
 #include "naive.h"
 #include "flatmc.h"
+#include "mcts.h"
 
 void Play() {
     State s(4);
     s.init();
     size_t c = 0;
+
     auto ragent = RandomAgent();
     auto naive = NaiveAgent();
     auto flatmc = std::make_shared<MCAgent>();
+    auto mcts = std::make_shared<MCTSAgent>();
+
     while (!s.gameOver()) {
         LOG("");
         LOG("CHALLENGE #{}", c);
@@ -24,14 +28,13 @@ void Play() {
                 LOG("");
                 LOG("PLAYER {} TO MOVE", p.id);
                 p.hand.print();
-                //p.debug();
                 Moves m(s);
                 m.print();
 
                 switch (s.current().id) {
                 case 0: ragent.move(s); break;
                 case 1: naive.move(s); break;
-                case 2: naive.move(s); break; //flatmc->move(s); break;
+                case 2: flatmc->move(s); break;
                 case 3: ragent.move(s); break;
                 }
 #ifndef NO_LOGGING

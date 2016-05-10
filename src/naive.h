@@ -1,9 +1,10 @@
 #pragma once
 
-#include "agent.h"
+#include "state.h"
+#include "moves.h"
 
-struct NaiveAgent : Agent {
-    std::string name() const override { return "Naive"; }
+struct NaiveAgent {
+    std::string name() const { return "Naive"; }
 
     int cardValue(const Card &c, const State &s) const {
         if (s.challenge.invert_value) {
@@ -37,7 +38,7 @@ struct NaiveAgent : Agent {
         return cardValue(Card::Get(m.card), s);
     }
 
-    void move(State &s) const override {
+    void move(State &s) {
         Moves moves(s);
 
         std::vector<int> values;

@@ -120,6 +120,30 @@ struct State {
         }
     }
 
+    float getResult(size_t i) const {
+        TRACE();
+        // Note: It may be useful to emphasize highest score even if losing:
+        //     return (float) players[i]->score / 200.;
+        size_t best = 0;
+        int high = 0;
+        size_t count = 0;
+        for (size_t j=0; j < players.size(); ++j) {
+            if (players[j].score >= high) {
+                if (players[j].score == high) {
+                    ++count;
+                } else {
+                    count = 0;
+                }
+                high = players[j].score;
+                best = j;
+            }
+        }
+        if (count == 0 && i == best) {
+            return 1;
+        }
+        return 0;
+    }
+
     void printScore() {
         auto s = std::to_string(players[0].score);
         for (size_t i=1; i < players.size(); ++i) {

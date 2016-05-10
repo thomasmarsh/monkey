@@ -5,10 +5,10 @@
 #include <thread>
 #include <map>
 
-struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
+struct MCAgent : public std::enable_shared_from_this<MCAgent> {
     static constexpr size_t MC_LEN = 70;
 
-    std::string name() const override { return "MCPlayer"; }
+    std::string name() const { return "MCPlayer"; }
 
     const size_t mc_len;
     const size_t concurrency;
@@ -37,14 +37,6 @@ struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
         return i;
     }
 
-    void finishGame(State &s) const {
-        // Play remainder of challenges
-        while (!s.gameOver()) {
-            Moves m(s);
-            randomMove(m, s);
-        }
-    }
-
     void searchOne(const Moves &m, MoveStats &stats) const
     {
         // Clone with all random players.
@@ -53,7 +45,9 @@ struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
         auto p = clone.current().id;
         auto i = randomMove(m, clone);
 
-        finishGame(clone);
+        auto agent = RandomAgent();
+        Rollout(clone, agent);
+
         updateStats(stats, clone, p, i);
     }
 
@@ -100,7 +94,7 @@ struct MCAgent : Agent, public std::enable_shared_from_this<MCAgent> {
         return best;
     }
 
-    void move(State &s) const override
+    void move(State &s)
     {
         Moves m(s);
 

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "agent.h"
+#include "naive.h"
 #include "mcts_node.h"
 
-// Randomization policy for ISMCTSPlayer
+// Randomization policy for MCTSAgent
 enum class MCTSRand {
     NEVER,  // use the same hidden state for every tree
     ONCE,   // use one hidden state per tree
@@ -18,17 +19,17 @@ static std::string to_string(MCTSRand p) {
     }
 };
 
-struct ISMCTSPlayer : Player {
+struct MCTSAgent {
+    using MoveList = Node::MoveList;
+
     size_t itermax;
     size_t num_trees;
     float exploration;
     size_t move_count;
     MCTSRand policy;
 
-    using NodeT = Node<Move>::Ptr;
-
     // suggest imax=1,000..10,000, n=8..10, c=0.7
-    ISMCTSPlayer(size_t imax, size_t n, float c, MCTSRand p)
+    MCTSAgent(size_t imax=1000, size_t n=8, float c=0.7, MCTSRand p=MCTSRand::ALWAYS)
     : itermax(imax)
     , num_trees(n)
     , exploration(c)
@@ -36,88 +37,76 @@ struct ISMCTSPlayer : Player {
     , policy(p)
     {}
 
-    string name() const override {
-        return "ISMCTS:" + to_string(num_trees) + "/"
-                         + to_string(itermax)   + "/"
-                         + PolicyStr(policy)    + "/"
-                         + to_string(exploration);
+    std::string name() const {
+        return fmt::format("MCTS:{}/{}/{}/{}",
+                           num_trees,
+                           itermax,
+                           to_string(policy),
+                           exploration);
     }
 
     // Actions to take before performing a move to make sure we're in the right state.
-    void preMove(const GameState::Ptr &state) {
-        if (state->round.challenge_finished) {
-            state->beginChallenge();
-        } else if (state->round.round_finished) {
-            state->round.reset();
+    void preMove(State &state) {
+        // TODO: reevaluate
+        if (state.challenge.finished()) {
+            state.challenge.reset();
         }
-        assert(!state->game_over);
+        assert(!state.gameOver());
     }
 
     // Actions to take after performing a move to make sure we're in the right state.
-    void postMove(const GameState::Ptr &state) {
-        if (state->round.challenge_finished) {
-            state->endChallenge();
-            if (!state->gameOver()) {
-                state->beginChallenge();
-            }
-        } else if (state->round.round_finished) {
-            if (!state->game_over) {
-                state->round.reset();
-            }
+    void postMove(State &state) {
+        // TODO: reevaluate
+        if (state.challenge.finished()) {
+            state.challenge.reset();
         }
     }
 
-    void makeMove(Move move, const GameState::Ptr &state) {
+    void makeMove(const Move &move, State &state) {
         preMove(state);
-
-        auto p = state->currentPlayer()->id;
-        state->doMove(p, move);
-        state->round.checkState(p, move);
-
+        state.perform(&move);
         postMove(state);
     }
 
-    void log(NodeT root, GameState::Ptr state) {
+    void log(Node::Ptr root, const State &state) {
         //LOG("exploration tree:");
         //root->printTree();
         //auto p = state->currentPlayer();
-        //LOG("player %zu children:", p->id);
+        //LOG("player {} children:", p->id);
         //root->printChildren();
         writeDot(root);
     }
 
-    void loop(NodeT root, GameState::Ptr root_state) {
+    void loop(Node::Ptr root, const State &root_state) {
 
-        auto initial = root_state->clone<NaivePlayer>();
-        initial->randomizeHiddenState(id);
+        auto initial = root_state;
+        initial.randomizeHiddenState();
 
         for (int i=0; i < itermax; ++i) {
             initial = iterate(root, initial, i);
         }
     }
 
-    Move move(GameState::Ptr root_state) override {
-        assert(!root_state->game_over);
-        return parallelSearch(root_state);
-        //return singleSearch(root_state);
+    void move(State &root_state) {
+        assert(!root_state.gameOver());
+        //return parallelSearch(root_state);
+        singleSearch(root_state);
     }
 
-    vector<pair<Move,size_t>> iterateAndMerge(GameState::Ptr root_state) {
-        LogLock lock;
+    std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) {
+        ScopedLogLevel lock(LogContext::Level::warn);
 
-        vector<NodeT> root_nodes(num_trees);
-        vector<thread> t(num_trees);
+        std::vector<Node::Ptr> root_nodes(num_trees);
+        std::vector<std::thread> t(num_trees);
 
-        {
-            for (size_t i=0; i < num_trees; ++i) {
-                root_nodes[i] = make_shared<Node>(Move::NullMove(), Cards{0}, nullptr, -1);
-                t[i] = thread([this, root_state, root=root_nodes[i]] {
-                    this->loop(root, root_state);
-                });
-            }
+        for (size_t i=0; i < num_trees; ++i) {
+            root_nodes[i] = Node::New(Move::Null(), Cards{0}, nullptr, -1);
+            t[i] = std::thread([this, root_state, root=root_nodes[i]] {
+                this->loop(root, root_state);
+            });
         }
 
-        vector<pair<Move,size_t>> merge;
+        std::vector<std::pair<Move,size_t>> merge;
         for (size_t i=0; i < num_trees; ++i) {
             t[i].join();
         }
@@ -139,35 +128,35 @@ struct ISMCTSPlayer : Player {
         return merge;
     }
 
-    Move parallelSearch(GameState::Ptr root_state) {
+    Move parallelSearch(const State &root_state) {
         auto merge = iterateAndMerge(root_state);
 
         // This can happen at the last move; not entirely sure why.
         if (merge.empty()) {
-            return {Move::PASS, 0};
+            return Move::Pass();
         }
 
-        auto best = Move {Move::NULL_ACTION, 0};
+        auto best = Move::Null();
         int high = 0;
-        LOG("player %zu children:", id);
+        LOG("player {} children:", root_state.current().id);
         Sort(merge, [](const auto &a, const auto &b) {
             return a.second > b.second;
         });
         for (const auto &e : merge) {
-            LOG(" - %lu %s", e.second, reprForMove(e.first).c_str());
+            LOG(" - {} {}", e.second, to_string(e.first, root_state.current()));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;
             }
         }
 
-        //LOG("best: %lu %s", high, CARD_TABLE[Player::cardForMove(best)].repr().c_str());
-        assert(!Move::IsNullMove(best));
+        //LOG("best: {} {}", high, CARD_TABLE[Player::cardForMove(best)].repr().c_str());
+        assert(best.isNull());
         return best;
     }
 
-    Move singleSearch(GameState::Ptr root_state) {
-        auto root = make_shared<Node>(Move::NullMove(), Cards{0}, nullptr, -1);
+    Move singleSearch(const State &root_state) {
+        auto root = Node::New(Move::Null(), Cards{0}, nullptr, -1);
 
         loop(root, root_state);
 
@@ -175,7 +164,7 @@ struct ISMCTSPlayer : Player {
 
         // This can happen at the last move; not entirely sure why.
         if (root->children.empty()) {
-            return {Move::PASS, 0};
+            return Move::Pass();
         }
 
         // Helper for writeDot
@@ -192,20 +181,22 @@ struct ISMCTSPlayer : Player {
     }
 
     // Randomize the hidden state.
-    pair<GameState::Ptr,GameState::Ptr> determinize(GameState::Ptr rootstate, size_t i) {
-        GameState::Ptr initial = rootstate;
-        GameState::Ptr state = rootstate->clone<NaivePlayer>();
+    std::pair<State,State> determinize(State rootstate, size_t i) {
+        auto initial = rootstate;
+        auto state = rootstate;
         if (policy == MCTSRand::ALWAYS || (policy == MCTSRand::ONCE && i == 0)) {
-            state->randomizeHiddenState(id);
-            initial = state->clone<NaivePlayer>();
+            state.randomizeHiddenState();
+            initial = state;
         }
         return {initial, state};
     }
 
-    pair<GameState::Ptr, NodeT> select(GameState::Ptr state,
-                                       NodeT node)
+    std::pair<State, Node::Ptr> select(State &state,
+                                       Node::Ptr node)
     {
-        auto moves = state->getCurrentMoveList();
+        Moves m(state);
+        // TODO: get rid of this copy
+        auto moves = m.moves;
         auto untried = node->getUntriedMoves(moves);
 
         while (!moves.empty())
@@ -216,39 +207,41 @@ struct ISMCTSPlayer : Player {
             node = node->selectChildUCB(state, moves, exploration);
             makeMove(node->move, state);
 
-            moves = state->getCurrentMoveList();
+            Moves m2(state);
+            // TODO: another copy here
+            moves = m2.moves;
             untried = node->getUntriedMoves(moves);
         }
         return {state, node};
     }
 
     // Create a new node to explore.
-    pair<GameState::Ptr, NodeT> expand(GameState::Ptr state,
-                                           NodeT node,
-                                           MoveList &untried)
+    std::pair<State, Node::Ptr> expand(State &state,
+                                       Node::Ptr node,
+                                       MoveList &untried)
     {
         if (!untried.empty()) {
             auto m = untried[urand(untried.size())];
-            auto p = state->currentPlayer();
-            auto c = cardsForMove(m, p);
+            auto &p = state.current();
             makeMove(m, state);
-            node = node->addChild(m, c, p->id);
+            node = node->addChild(m, {m.card}, p.id);
         }
         return {state, node};
     }
 
-    GameState::Ptr iterate(NodeT root, GameState::Ptr initial, int i) {
+    State iterate(Node::Ptr root, State &initial, int i) {
         auto node = root;
 
         // Determinize
-        GameState::Ptr state;
-        tie(initial,state) = determinize(initial, i);
+        auto state = initial;
+        std::tie(initial, state) = determinize(initial, i);
 
         // Find next node
-        tie(state, node) = select(state, node);
+        std::tie(state, node) = select(state, node);
 
         // Simulate
-        state->finishGame();
+        auto agent = NaiveAgent();
+        Rollout(state, agent);
 
         // Backpropagate
         while (node) {
@@ -258,33 +251,16 @@ struct ISMCTSPlayer : Player {
         return initial;
     }
 
-    Cards cardsForMove(const Move &m, Player *p) const {
-        Cards c {0};
-        switch (m.action) {
-        case Move::PLAY_STYLE:
-            c = p->cardsForStyle(m.index);
-            break;
-        case Move::PLAY_CHARACTER:
-        case Move::PLAY_WEAPON:
-        case Move::PLAY_WRENCH:
-            c[0] = p->cardForMove(m);
-            break;
-        default:
-            break;
-        }
-        return c;
-    }
-
-    void writeNodeDefinitions(FILE *fp, NodeT node, int &n, int indent=1) {
+    void writeNodeDefinitions(FILE *fp, Node::Ptr node, int &n, int indent=1) {
         int m = n;
         fprintf(fp, "%*cn%d [\n", indent*2, ' ', m);
         fprintf(fp, "%*c  label = \"%s | %s\"\n",
                 indent*2, ' ', 
                 node->shortRepr().c_str(),
-                EscapeQuotes(node->smartMoveRepr()).c_str());
+                EscapeQuotes(to_string(node->move)).c_str());
         fprintf(fp, "%*c  shape = record\n", indent*2, ' ');
         fprintf(fp, "%*c  style = filled\n", indent*2, ' ');
-        string color;
+        std::string color;
         switch (node->just_moved) {
         case 0: color = "fc1e33"; break;
         case 1: color = "ff911e"; break;
@@ -302,7 +278,7 @@ struct ISMCTSPlayer : Player {
         }
     }
 
-    void writeNodeConnections(FILE *fp, NodeT node, int &n) {
+    void writeNodeConnections(FILE *fp, Node::Ptr node, int &n) {
         int m = n;
         for (auto &child : node->children) {
             ++n;
@@ -311,11 +287,11 @@ struct ISMCTSPlayer : Player {
         }
     }
 
-    void writeDot(NodeT root) {
+    void writeDot(Node::Ptr root) {
         root->sort();
 
-        string fname("ismcts/ismcts.");
-        fname += to_string(move_count);
+        std::string fname("ismcts/ismcts.");
+        fname += std::to_string(move_count);
         FILE *fp = fopen(fname.c_str(), "w");
         assert(fp);
 

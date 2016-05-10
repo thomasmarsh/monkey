@@ -3,15 +3,22 @@
 #include "state.h"
 #include "moves.h"
 
-struct Agent {
-    virtual std::string name() const = 0;
-    virtual void move(State &s) const = 0;
-};
+template <typename A>
+void Rollout(State &s, A &agent) {
+    while (!s.gameOver()) {
+        agent.move(s);
 
-struct RandomAgent : Agent {
-    std::string name() const override { return "Random"; }
+        // TODO: these shouldn't need to reach so deep
+        if (s.challenge.round.finished()) {
+            s.challenge.round.reset();
+        }
+    }
+}
 
-    void move(State &s) const override {
+struct RandomAgent {
+    std::string name() const { return "Random"; }
+
+    void move(State &s) {
         Moves moves(s);
         assert(!moves.moves.empty());
         auto &move = moves.moves[urand(moves.moves.size())];
