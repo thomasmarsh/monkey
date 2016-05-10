@@ -21,14 +21,12 @@ add_executable(
     src/support/json11.cc
     src/cards.cc
     src/init.cc
-    src/main.cc
-    src/util.cc)
+    src/main.cc)
 
 add_executable(
     mtest
     src/cards.cc
     src/init.cc
-    src/util.cc
     src/support/json11.cc
     tests/test_agent.cc
     tests/test_challenge.cc

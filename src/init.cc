@@ -8,5 +8,4 @@ int gTraceLevel = 0;
 void Initialize() {
     LOG("initialize");
     LoadCards();
-    BuildDoubleIndices();
 }
