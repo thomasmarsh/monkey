@@ -35,22 +35,24 @@ struct Moves {
     const State &state;
     const Player &player;
     Player::Aggregate exposed;
+    bool played_double_style;
 
-    Moves(const State &s)
+    explicit Moves(const State &s, bool find_moves=true)
     : state(s)
     , player(s.current())
     , exposed(player.id, s.players)
+    , played_double_style(false)
     {
         TRACE();
-        moves.reserve(16);
-        findMoves();
+        if (find_moves) {
+            moves.reserve(16);
+            findMoves();
+        }
     }
 
     // Find all moves for card i in hand.
-    Moves(const State &s, size_t i)
-    : state(s)
-    , player(s.current())
-    , exposed(player.id, s.players)
+    explicit Moves(const State &s, size_t i)
+    : Moves(s, false)
     {
         TRACE();
         moves.reserve(16);
@@ -217,9 +219,14 @@ struct Moves {
         // start position.
         if (styles.empty()) {
             // NOTE: if taking of the XOR in the arg_type dispatch, then remove this search here.
-            maskedMoves(mask, i, card);
+
+            if (!played_double_style) {
+                maskedMoves(mask, i, card);
+            }
             return;
         }
+
+        played_double_style = true;
 
         // Finally, iterate over all the cards in hand that accept double styles.
         for (size_t c : EachBit(mask)) {
@@ -267,6 +274,7 @@ struct Moves {
     void handMoves(size_t i, const Card &card) {
         TRACE();
         if (card.action == Action::PLAY_CHARACTER) {
+            ScopedLogLevel l(LogContext::Level::warn);
             charHandMoves(i, card);
         } else {
             allHandMoves(i, card);

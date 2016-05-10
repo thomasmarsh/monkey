@@ -2,9 +2,11 @@
 
 #include <spdlog/spdlog.h>
 
+#include <stack>
+
 //#define NO_LOGGING
 
-#define NO_DEBUG
+//#define NO_DEBUG
 #define NO_TRACE
 
 namespace spd = spdlog;
@@ -20,14 +22,19 @@ inline std::string LogBasename(const std::string &path) {
     } while (0)
 
 #ifdef NO_LOGGING
+
 #define LOG(...)
 #define WARN(...)
 #define NO_DEBUG
 #define NO_TRACE
+
 #else
+
 #define LOG(...)  BASE_LOG(info, ##__VA_ARGS__)
 #define WARN(...) BASE_LOG(warn, ##__VA_ARGS__)
+
 #endif // NO_LOGGING
+
 
 #ifdef NO_DEBUG
 #define DLOG(...)
@@ -56,8 +63,47 @@ inline std::string LogBasename(const std::string &path) {
 
 #define SET_LOG_LEVEL(l) spd::get("console")->set_level(spd::level::l)
 
-extern int gTraceLevel;
+struct LogContext {
+    using Level = spd::level::level_enum;
 
+    // TODO: make thread local
+    int trace_indent;
+    std::stack<Level> levels;
+
+    LogContext() : trace_indent(0)
+    {
+    }
+
+    std::string getIndent() { return std::string(trace_indent*4, ' '); }
+    void indent() { ++trace_indent; }
+    void dedent() {
+        assert(trace_indent > 0);
+        --trace_indent;
+    }
+
+    void push(Level level) {
+        levels.push(spd::get("console")->level());
+        spd::get("console")->set_level(level);
+    }
+
+    void pop() {
+        assert(!levels.empty());
+        spd::get("console")->set_level(levels.top());
+        levels.pop();
+    }
+};
+
+extern LogContext gLogContext;
+
+struct ScopedLogLevel {
+    ScopedLogLevel(LogContext::Level level) {
+        gLogContext.push(level);
+    }
+
+    ~ScopedLogLevel() {
+        gLogContext.pop();
+    }
+};
 
 struct Tracer {
     const char *f;
@@ -65,21 +111,16 @@ struct Tracer {
 
     Tracer(const char *_f, int l) : f(_f), line(l) {
         log("ENTER");
-        ++gTraceLevel;
+        gLogContext.indent();
     }
 
     ~Tracer() {
-        assert(gTraceLevel > 0);
-        --gTraceLevel;
+        gLogContext.dedent();
         log("LEAVE");
     }
 
-    static std::string indent() {
-        return std::string(gTraceLevel*4, ' ');
-    }
-
     void log(const char *label) const {
-        BASE_LOG(trace, "{}{}: {}:{}",  indent(), label, f, line);
+        BASE_LOG(trace, "{}{}: {}:{}",  gLogContext.getIndent(), label, f, line);
     }
 };
 

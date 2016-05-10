@@ -3,7 +3,7 @@
 #include "rand.h"
 
 ARC4RNG Arc4RNG;
-int gTraceLevel = 0;
+LogContext gLogContext;
 
 void Initialize() {
     LOG("initialize");

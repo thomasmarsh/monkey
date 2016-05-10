@@ -60,4 +60,16 @@ struct PlayerHand {
         }
     }
 #endif
+
+    void print() const {
+        LOG("Hand:");
+        LOG("    CHARACTERS");
+        for (auto c : characters) {
+            LOG("    {}", to_string(Card::Get(c)));
+        }
+        LOG("    SKILLS");
+        for (auto c : skills) {
+            LOG("    {}", to_string(Card::Get(c)));
+        }
+    }
 };

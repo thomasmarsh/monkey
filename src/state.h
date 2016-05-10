@@ -173,7 +173,7 @@ struct State {
 
         // Copy all unseen cards (draw pile) from the main to the hidden deck.
         CopyCards(deck->draw.characters, hidden->draw.characters);
-        CopyCards(deck->draw.skills,  hidden->draw.skills);
+        CopyCards(deck->draw.skills,     hidden->draw.skills);
 
         // Copy all cards from players to hidden deck.
         for (auto &p : players) {
@@ -243,9 +243,6 @@ struct State {
 
     void logDraw(size_t i, CardRef c) {
         LOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
-        if (Card::Get(c).id == 0) {
-            ;
-        }
     }
 
     void playersInvertValue() {

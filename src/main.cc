@@ -6,7 +6,7 @@
 #include "flatmc.h"
 
 void Play() {
-    State s(2);
+    State s(4);
     s.init();
     size_t c = 0;
     auto ragent = RandomAgent();
@@ -20,8 +20,10 @@ void Play() {
         while (!s.challenge.finished()) {
             LOG("ROUND <{}>", r);
             while (!s.challenge.round.finished()) {
-                //const auto &p = s.current();
-                //DLOG("PLAYER {}", p.id);
+                const auto &p = s.current();
+                LOG("");
+                LOG("PLAYER {} TO MOVE", p.id);
+                p.hand.print();
                 //p.debug();
                 Moves m(s);
                 m.print();
@@ -44,6 +46,7 @@ void Play() {
                 break;
             }
             ++r;
+            LOG("");
         }
         //s.printScore();
         s.reset();
@@ -60,7 +63,7 @@ int main() {
     spdlog::set_async_mode(q_size);
     spd::set_pattern("%H:%M:%S.%e%v");
 
-    SET_LOG_LEVEL(trace);
+    SET_LOG_LEVEL(info);
     Initialize();
     for (int i=0; i < 10; ++i) {
         Play();
