@@ -51,7 +51,6 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
         updateStats(stats, clone, p, i);
     }
 
-
     void updateStats(MoveStats &stats, const State &s, size_t p, size_t index) const {
         // Find winner, ties considered losses
         auto best = p;

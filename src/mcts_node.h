@@ -142,12 +142,12 @@ struct Node : std::enable_shared_from_this<Node> {
 
     void printChildren() const {
         for (const auto &n : children) {
-            LOG(" - %s", n->repr().c_str());
+            LOG(" - {}", n->repr());
         }
     }
 
     void printTree(size_t indent=0) const {
-        LOG("%s", (indentStr(indent) + repr()).c_str());
+        LOG("{}", (indentStr(indent) + repr()));
 
         for (const auto &c : children) {
             c->printTree(indent+1);

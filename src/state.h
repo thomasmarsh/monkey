@@ -477,6 +477,7 @@ struct State {
     }
 
     void perform(const Move *move) {
+        // TODO: assert !round_finished, !gameOver, etc.
         assert(move);
         while (move) {
             processMove(*move);

@@ -65,6 +65,9 @@ inline std::string LogBasename(const std::string &path) {
 
 struct LogContext {
     using Level = spd::level::level_enum;
+    using Lock = std::lock_guard<std::mutex>;
+
+    std::mutex mtx;
 
     // TODO: make thread local
     int trace_indent;
@@ -74,19 +77,30 @@ struct LogContext {
     {
     }
 
-    std::string getIndent() { return std::string(trace_indent*4, ' '); }
-    void indent() { ++trace_indent; }
+    std::string getIndent() {
+        Lock lock(mtx);
+        return std::string(trace_indent*4, ' ');
+    }
+
+    void indent() {
+        Lock lock(mtx);
+        ++trace_indent;
+    }
+
     void dedent() {
+        Lock lock(mtx);
         assert(trace_indent > 0);
         --trace_indent;
     }
 
     void push(Level level) {
+        Lock lock(mtx);
         levels.push(spd::get("console")->level());
         spd::get("console")->set_level(level);
     }
 
     void pop() {
+        Lock lock(mtx);
         assert(!levels.empty());
         spd::get("console")->set_level(levels.top());
         levels.pop();

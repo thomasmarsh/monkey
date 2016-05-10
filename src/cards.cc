@@ -162,7 +162,7 @@ static void ValidateCardJson(const Json &json) {
     }, error);
 
     if (!error.empty()) {
-        WARN("has_shape error: %s", error.c_str());
+        WARN("has_shape error: {}", error);
     }
     assert(has_shape);
 }
@@ -224,7 +224,7 @@ static void LoadCardTableProto() {
 
     auto json = Json::parse(LoadCardsJson(), error);
     if (!error.empty()) {
-        ERROR("JSON parse error: {}", error.c_str());
+        ERROR("JSON parse error: {}", error);
     }
 
     ParseJson(json);
