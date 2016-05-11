@@ -5,7 +5,7 @@
 #include <thread>
 #include <map>
 
-struct MCAgent : public std::enable_shared_from_this<MCAgent> {
+struct MCAgent {
     static constexpr size_t MC_LEN = 70;
 
     std::string name() const { return "MCPlayer"; }
@@ -16,6 +16,8 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
     struct MoveStat {
         int scores;
         int visits;
+
+        float average() { return float(scores) / float(visits); }
     };
 
     using MoveStats = std::map<size_t, MoveStat>;
@@ -23,28 +25,28 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
 
     MCAgent(size_t l=MC_LEN)
     : mc_len(l)
-    , concurrency(1) //std::thread::hardware_concurrency())
+    , concurrency(std::thread::hardware_concurrency())
     {
+        TRACE();
     }
 
-    size_t randomMove(const Moves &m, State &s) const {
-        // Choose a move and perform it.
-        size_t i = urand(m.moves.size());
-        s.perform(&m.moves[i]);
-        if (s.challenge.round.finished()) {
-            s.challenge.round.reset();
-        }
-        return i;
-    }
-
-    void searchOne(const Moves &m, MoveStats &stats) const
-    {
-        // Clone with all random players.
+    void searchOne(const Moves &m, MoveStats &stats) const {
+        TRACE();
+        // Clone and randomize
         auto clone = m.state;
         clone.randomizeHiddenState();
-        auto p = clone.current().id;
-        auto i = randomMove(m, clone);
+        assert(clone.deck.get() != m.state.deck.get());
+        assert(*clone.deck != *m.state.deck);
 
+        //  Remember which player was about to play
+        auto p = clone.current().id;
+
+        // Select a move and perform it
+        ForwardState(clone);
+        auto i = RandomMove(m, clone);
+        ForwardState(clone);
+
+        // Randomly rollout the remainder
         auto agent = RandomAgent();
         Rollout(clone, agent);
 
@@ -52,6 +54,7 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
     }
 
     void updateStats(MoveStats &stats, const State &s, size_t p, size_t index) const {
+        TRACE();
         // Find winner, ties considered losses
         auto best = p;
         int high = s.players[p].score;
@@ -74,6 +77,7 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
     }
 
     size_t findBest(MoveStats &stats) const {
+        TRACE();
         int high = 0;
         size_t best = 0;
 
@@ -82,7 +86,7 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
         for (auto p : stats) {
             std::tie(index, s) = p;
             
-            int avg = s.scores/(float)s.visits;
+            float avg = (float)s.scores/(float)s.visits;
 
             // Use >= so we skip over concede if it ties with something else
             if (avg >= high) {
@@ -93,9 +97,40 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
         return best;
     }
 
-    void move(State &s)
-    {
+    void search(const Moves &m, MoveStats &stats, size_t samples) {
+        TRACE();
+        for (int i=0; i < samples; ++i) {
+            searchOne(m, stats);
+        }
+    }
+
+    void dispatchThreads(const Moves &m, MoveStats &stats, size_t samples) {
+        std::vector<std::thread> t(concurrency);
+        for (size_t i=0; i < concurrency; ++i) {
+            t[i] = std::thread([this, &m, &stats, samples] {
+                this->search(m, stats, samples);
+            });
+        }
+        for (size_t i=0; i < concurrency; ++i) {
+            t[i].join();
+        }
+    }
+
+    void dispatchSearch(const Moves &m, MoveStats &stats) {
+        ScopedLogLevel l(LogContext::Level::warn);
+        size_t samples = mc_len * m.moves.size() / concurrency;
+        if (concurrency == 1) {
+            search(m, stats, samples);
+        } else {
+            dispatchThreads(m, stats, samples);
+        }
+    }
+
+    void move(State &s) {
+        TRACE();
+
         Moves m(s);
+        assert(!m.moves.empty());
 
         // If only one move, take that one without searching.
         if (m.moves.size() == 1) {
@@ -104,21 +139,34 @@ struct MCAgent : public std::enable_shared_from_this<MCAgent> {
         }
 
         MoveStats stats;
-
-        size_t samples = mc_len * m.moves.size() / concurrency;
-        const auto self = shared_from_this();
-        std::vector<std::thread> t(concurrency);
-        for (size_t i=0; i < concurrency; ++i) {
-            t[i] = std::thread([self, &m, &stats, samples] {
-                                   for (int j=0; j < samples; ++j) {
-                                       self->searchOne(m, stats);
-                                   }
-                               });
-        }
-        for (size_t i=0; i < concurrency; ++i) {
-            t[i].join();
-        }
-
+        dispatchSearch(m, stats);
+        logStats(m, stats);
         s.perform(&m.moves[findBest(stats)]);
     }
+
+    using SortedStats = std::vector<std::pair<size_t,MoveStat>>;
+
+    SortedStats sortStats(const MoveStats &stats) const {
+        SortedStats sorted;
+
+        std::copy(stats.begin(), stats.end(), std::back_inserter(sorted));
+
+        std::sort(sorted.begin(), sorted.end(), [](auto &a, auto &b) {
+            return a.second.average() > b.second.average();
+        });
+
+        return sorted;
+    }
+
+    void logStats(const Moves &m, const MoveStats &stats) const {
+        LOG("Search results:");
+
+        size_t index;
+        MoveStat stat;
+        for (const auto &entry : sortStats(stats)) {
+            std::tie(index, stat) = entry;
+            LOG("    {:3.2f} {}", stat.average(), to_string(m.moves[index], m.state.current()));
+        }
+    }
+
 };

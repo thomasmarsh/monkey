@@ -83,7 +83,7 @@ struct Node : std::enable_shared_from_this<Node> {
 
     // Use the UCB1 formula to select a child node, filtered by the given list
     // of legal moves.
-    Ptr selectChildUCB(const State &state,
+    Ptr selectChildUCB(std::shared_ptr<State> &state,
                        const MoveList &legal_moves,
                        float exploration) {
         TRACE();
@@ -122,11 +122,11 @@ struct Node : std::enable_shared_from_this<Node> {
 
     // Update this node - increment the visit count by one and increase the
     // win count by the result of the terminalState for just_moved
-    void update(const State &terminal) {
+    void update(const std::shared_ptr<State> &terminal) {
         TRACE();
         visits += 1;
         if (just_moved != -1) {
-            wins += terminal.getResult(just_moved);
+            wins += terminal->getResult(just_moved);
         }
     }
 
@@ -142,12 +142,12 @@ struct Node : std::enable_shared_from_this<Node> {
 
     void printChildren() const {
         for (const auto &n : children) {
-            LOG(" - {}", n->repr());
+            WARN(" - {}", n->repr());
         }
     }
 
     void printTree(size_t indent=0) const {
-        LOG("{}", (indentStr(indent) + repr()));
+        WARN("{}", (indentStr(indent) + repr()));
 
         for (const auto &c : children) {
             c->printTree(indent+1);

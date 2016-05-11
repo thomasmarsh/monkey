@@ -16,6 +16,7 @@ struct State {
     : deck(std::make_shared<Deck>())
     , challenge(num_players)
     {
+        TRACE();
         for (size_t i=0; i < num_players; ++i) {
             players.emplace_back(Player(i));
         }
@@ -27,11 +28,13 @@ struct State {
     , players(rhs.players)
     , challenge(rhs.challenge)
     {
+        TRACE();
         assert(*deck == *rhs.deck);
         assert(events == rhs.events);
     }
 
     void init() {
+        TRACE();
         deck->populate();
         deck->shuffle();
         deck->print();
@@ -41,16 +44,22 @@ struct State {
 
 #ifndef NO_DEBUG
     void debug() const {
+        DLOG("EVENTS");
+        for (const auto c : events) {
+            DLOG("    {}", to_string(Card::Get(c)));
+        }
         for (int i=0; i < players.size(); ++i) {
             DLOG("PLAYER {}", i);
             players[i].debug();
         }
         challenge.debug();
+        DLOG("gameOver() = {}", gameOver());
     }
 #endif
 
     // State-wide card count
     size_t size() const {
+        TRACE();
         size_t count = 0;
         for (const auto &p : players) {
             count += p.size();
@@ -60,20 +69,24 @@ struct State {
     }
 
     void validateCards() const {
+        TRACE();
         assert(size() == NUM_CARDS);
     }
 
 #pragma mark - State Management
 
     void checkGameOver() {
+        TRACE();
         challenge.round.game_over = deck->draw.events.empty();
     }
 
     bool gameOver() const {
+        TRACE();
         return challenge.round.game_over;
     }
 
     void step() {
+        TRACE();
         assert(!challenge.round.game_over);
         challenge.step();
         if (challenge.finished()) {
@@ -153,6 +166,7 @@ struct State {
     }
 
     void discardVisible() {
+        TRACE();
         for (auto &p : players) {
             for (const auto &c : p.visible.characters) {
                 for (auto s : c.styles) { deck->discardCard(Card::Get(s)); }
@@ -164,10 +178,12 @@ struct State {
     }
 
     auto exposed() const {
+        TRACE();
         return Player::Aggregate(challenge.round.current, players);
     }
 
     void deal() {
+        TRACE();
         constexpr size_t TARGET_C = 4;
         constexpr size_t TARGET_S = 6;
 
@@ -242,6 +258,7 @@ struct State {
 #pragma mark - Event Handling
 
     void drawEvent() {
+        TRACE();
         auto c = deck->drawEvent();
         events.push_back(c);
         const auto &card = Card::Get(c);
@@ -250,6 +267,7 @@ struct State {
     }
 
     void handleEvent(const Card &card) {
+        TRACE();
         switch (card.action) {
         case Action::E_NO_STYLES:       challenge.no_styles  = true; break;
         case Action::E_NO_WEAPONS:      challenge.no_weapons = true; break;
@@ -266,22 +284,26 @@ struct State {
     }
 
     void logDraw(size_t i, CardRef c) {
+        TRACE();
         LOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
     }
 
     void playersInvertValue() {
+        TRACE();
         for (auto &p : players) {
             p.visible.invert_value = true;
         }
     }
 
     void playersDiscardTwo() {
+        TRACE();
         for (auto &p : players) {
             p.discard_two = true;
         }
     }
 
     void playersDrawOneCharacter() {
+        TRACE();
         for (auto &p : players) {
             auto c = deck->drawCharacter();
             logDraw(p.id, c);
@@ -291,6 +313,7 @@ struct State {
 
 
     void playersDrawTwoSkills() {
+        TRACE();
         for (auto &p : players) {
             for (int j=0; j < 2; ++j) {
                 auto c = deck->drawSkill();
@@ -301,6 +324,7 @@ struct State {
     }
 
     void playersRandomSteal() {
+        TRACE();
         // The chosen card from each player's hand.
         auto np = players.size();
         std::vector<CardRef> stolen;
@@ -339,16 +363,19 @@ struct State {
 #pragma mark - Card Actions
 
     void pass() {
+        TRACE();
         LOG("<player {}:pass>", current().id);
         challenge.round.pass();
     }
 
     void concede() {
+        TRACE();
         LOG("<player {}:concede>", current().id);
         challenge.round.concede();
     }
 
     void discardOne(const Move &move) {
+        TRACE();
         auto &hand = current().hand;
         assert(move.arg < hand.size());
         auto c = hand.draw(move.arg);
@@ -362,6 +389,7 @@ struct State {
     }
 
     void drawCard(const Move &move) {
+        TRACE();
         CardRef c;
         switch (move.arg) {
         case 0: c = deck->drawCharacter(); break;
@@ -373,6 +401,7 @@ struct State {
     }
 
     void stealCard(const Move &move) {
+        TRACE();
         auto &other = players[move.arg];
         auto c = other.hand.drawRandom();
         LOG("<player {}:steal {} {}>",
@@ -381,25 +410,30 @@ struct State {
     }
 
     void knockoutChar(size_t i) {
+        TRACE();
         auto c = players[i >> 4].visible.removeCharacter(i & 0xF);
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutStyle(size_t i) {
+        TRACE();
         auto c = players[i >> 4].visible.removeStyle(i & 0xF);
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutWeapon(size_t i) {
+        TRACE();
         auto c = players[i >> 4].visible.removeWeapon(i & 0xF);
         deck->discardCard(Card::Get(c));
     }
 
     void tradeHand(const Move &move) {
+        TRACE();
         std::swap(current().hand, players[move.arg].hand);
     }
 
     void handleAction(const Move &move) {
+        TRACE();
         switch (move.action) {
         case Action::NONE:
         case Action::PLAY_WEAPON:
@@ -423,7 +457,7 @@ struct State {
         case Action::PLAY_DOUBLESTYLE:
         case Action::CAPTURE_WEAPON:
         case Action::PLAY_CHARACTER:
-            WARN("unimplemented action: {}", to_string(move.action));
+            //WARN("unimplemented action: {}", to_string(move.action));
             break;
 
         case Action::E_DRAW_TWO_SKILLS:
@@ -442,6 +476,7 @@ struct State {
 #pragma mark - Play Move
 
     void playCard(const Move &move, const Card &card) {
+        TRACE();
         auto &p = current();
         switch (card.type) {
         case CHARACTER:
@@ -464,6 +499,7 @@ struct State {
     }
 
     void processMove(const Move &move) {
+        TRACE();
         if (move.card != Move::null) {
             assert(move.card < NUM_CARDS);
             auto c = current().hand.draw(move.card);
@@ -477,6 +513,7 @@ struct State {
     }
 
     void perform(const Move *move) {
+        TRACE();
         // TODO: assert !round_finished, !gameOver, etc.
         assert(move);
         while (move) {

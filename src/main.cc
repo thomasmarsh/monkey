@@ -14,10 +14,10 @@ void Play() {
     s.init();
     size_t c = 0;
 
-    auto ragent = RandomAgent();
-    auto naive = NaiveAgent();
-    auto flatmc = std::make_shared<MCAgent>();
-    auto mcts = std::make_shared<MCTSAgent>();
+    RandomAgent ragent;
+    NaiveAgent naive;
+    MCAgent flatmc;
+    MCTSAgent mcts;
 
     while (!s.gameOver()) {
         LOG("");
@@ -37,8 +37,8 @@ void Play() {
                 switch (s.current().id) {
                 case 0: ragent.move(s); break;
                 case 1: naive.move(s); break;
-                case 2: flatmc->move(s); break;
-                case 3: ragent.move(s); break;
+                case 2: flatmc.move(s); break;
+                case 3: mcts.move(s); break;
                 }
 #ifndef NO_LOGGING
                 for (const auto &p : s.players) {
@@ -71,7 +71,7 @@ int main() {
 
     SET_LOG_LEVEL(info);
     Initialize();
-    for (int i=0; i < 10; ++i) {
+    //for (int i=0; i < 10; ++i) {
         Play();
-    }
+    //}
 }

@@ -6,7 +6,7 @@
 
 //#define NO_LOGGING
 
-//#define NO_DEBUG
+#define NO_DEBUG
 #define NO_TRACE
 
 namespace spd = spdlog;
@@ -49,7 +49,7 @@ inline std::string LogBasename(const std::string &path) {
 #else
 #define TLOG(fmt, ...) \
     do { \
-        auto indented = Tracer::indent() + fmt; \
+        auto indented = gLogContext.getIndent() + fmt; \
         BASE_LOG(trace, indented.c_str(), ##__VA_ARGS__); \
     } while (0)
 #define TRACE() Tracer __trace_(__PRETTY_FUNCTION__, __LINE__)

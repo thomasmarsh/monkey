@@ -21,6 +21,7 @@ static std::string to_string(MCTSRand p) {
 
 struct MCTSAgent {
     using MoveList = Node::MoveList;
+    using StatePtr = std::shared_ptr<State>;
 
     size_t itermax;
     size_t num_trees;
@@ -45,52 +46,30 @@ struct MCTSAgent {
                            exploration);
     }
 
-    // Actions to take before performing a move to make sure we're in the right state.
-    void preMove(State &state) {
-        // TODO: reevaluate
-        if (state.challenge.finished()) {
-            state.challenge.reset();
-        }
-        assert(!state.gameOver());
-    }
-
-    // Actions to take after performing a move to make sure we're in the right state.
-    void postMove(State &state) {
-        // TODO: reevaluate
-        if (state.challenge.finished()) {
-            state.challenge.reset();
-        }
-    }
-
-    void makeMove(const Move &move, State &state) {
-        preMove(state);
-        state.perform(&move);
-        postMove(state);
-    }
-
-    void log(Node::Ptr root, const State &state) {
-        //LOG("exploration tree:");
-        //root->printTree();
-        //auto p = state->currentPlayer();
-        //LOG("player {} children:", p->id);
-        //root->printChildren();
-        writeDot(root);
+    void makeMove(const Move &move, StatePtr &state) {
+        ForwardState(*state);
+        state->perform(&move);
+        ForwardState(*state);
     }
 
     void loop(Node::Ptr root, const State &root_state) {
 
-        auto initial = root_state;
-        initial.randomizeHiddenState();
+        // COPY HERE
+        auto initial = std::make_shared<State>(root_state.players.size());
+        *initial = root_state;
+        initial->randomizeHiddenState();
 
         for (int i=0; i < itermax; ++i) {
+            WARN("iteration {}/{}", i+1, itermax);
             initial = iterate(root, initial, i);
         }
     }
 
     void move(State &root_state) {
         assert(!root_state.gameOver());
-        //return parallelSearch(root_state);
-        singleSearch(root_state);
+        auto move = parallelSearch(root_state);
+        //auto move = singleSearch(root_state);
+        root_state.perform(&move);
     }
 
     std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) {
@@ -137,13 +116,13 @@ struct MCTSAgent {
         }
 
         auto best = Move::Null();
-        int high = 0;
-        LOG("player {} children:", root_state.current().id);
+        unsigned long high = 0;
+        WARN("player {} children:", root_state.current().id);
         Sort(merge, [](const auto &a, const auto &b) {
             return a.second > b.second;
         });
         for (const auto &e : merge) {
-            LOG(" - {} {}", e.second, to_string(e.first, root_state.current()));
+            WARN(" - {} {}", e.second, to_string(e.first, root_state.current()));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;
@@ -151,16 +130,17 @@ struct MCTSAgent {
         }
 
         //LOG("best: {} {}", high, CARD_TABLE[Player::cardForMove(best)].repr().c_str());
-        assert(best.isNull());
+        assert(!best.isNull());
         return best;
     }
 
     Move singleSearch(const State &root_state) {
+        ScopedLogLevel l(LogContext::Level::warn);
         auto root = Node::New(Move::Null(), Cards{0}, nullptr, -1);
 
         loop(root, root_state);
 
-        log(root, root_state);
+        //log(root, root_state);
 
         // This can happen at the last move; not entirely sure why.
         if (root->children.empty()) {
@@ -180,60 +160,61 @@ struct MCTSAgent {
         return (*best)->move;
     }
 
+    StatePtr Clone(const StatePtr &p) {
+        auto state = std::make_shared<State>(p->players.size());
+        *state = *p;
+        return state;
+    }
+
     // Randomize the hidden state.
-    std::pair<State,State> determinize(State rootstate, size_t i) {
-        auto initial = rootstate;
-        auto state = rootstate;
+    std::pair<StatePtr,StatePtr> determinize(const StatePtr &root_state, size_t i) {
+        auto initial = root_state;
+        auto state = Clone(root_state);
         if (policy == MCTSRand::ALWAYS || (policy == MCTSRand::ONCE && i == 0)) {
-            state.randomizeHiddenState();
-            initial = state;
+            state->randomizeHiddenState();
+            initial = Clone(state);
         }
         return {initial, state};
     }
 
-    std::pair<State, Node::Ptr> select(State &state,
-                                       Node::Ptr node)
-    {
-        Moves m(state);
-        // TODO: get rid of this copy
-        auto moves = m.moves;
+    std::pair<StatePtr, Node::Ptr> select(StatePtr state, Node::Ptr node) {
+        Moves m(*state);
+        auto moves = std::move(m.moves);
         auto untried = node->getUntriedMoves(moves);
 
-        while (!moves.empty())
-        {
+        while (!moves.empty()) {
             if (!untried.empty()) {
                 return expand(state, node, untried);
             }
             node = node->selectChildUCB(state, moves, exploration);
             makeMove(node->move, state);
 
-            Moves m2(state);
-            // TODO: another copy here
-            moves = m2.moves;
+            Moves m2(*state);
+            moves = std::move(m2.moves);
             untried = node->getUntriedMoves(moves);
         }
         return {state, node};
     }
 
     // Create a new node to explore.
-    std::pair<State, Node::Ptr> expand(State &state,
+    std::pair<StatePtr, Node::Ptr> expand(StatePtr state,
                                        Node::Ptr node,
                                        MoveList &untried)
     {
         if (!untried.empty()) {
             auto m = untried[urand(untried.size())];
-            auto &p = state.current();
+            auto &p = state->current();
             makeMove(m, state);
             node = node->addChild(m, {m.card}, p.id);
         }
         return {state, node};
     }
 
-    State iterate(Node::Ptr root, State &initial, int i) {
+    StatePtr iterate(Node::Ptr root, StatePtr initial, int i) {
         auto node = root;
 
         // Determinize
-        auto state = initial;
+        StatePtr state;
         std::tie(initial, state) = determinize(initial, i);
 
         // Find next node
@@ -241,7 +222,7 @@ struct MCTSAgent {
 
         // Simulate
         auto agent = NaiveAgent();
-        Rollout(state, agent);
+        Rollout(*state, agent);
 
         // Backpropagate
         while (node) {
@@ -251,13 +232,22 @@ struct MCTSAgent {
         return initial;
     }
 
-    void writeNodeDefinitions(FILE *fp, Node::Ptr node, int &n, int indent=1) {
+    void log(Node::Ptr root, const State &state) {
+        ScopedLogLevel l(LogContext::Level::debug);
+        WARN("exploration tree:");
+        root->printTree();
+        WARN("player {} children:", state.current().id);
+        root->printChildren();
+        writeDot(state, root);
+    }
+
+    void writeNodeDefinitions(FILE *fp, const State &s, Node::Ptr node, int &n, int indent=1) {
         int m = n;
         fprintf(fp, "%*cn%d [\n", indent*2, ' ', m);
         fprintf(fp, "%*c  label = \"%s | %s\"\n",
                 indent*2, ' ', 
                 node->shortRepr().c_str(),
-                EscapeQuotes(to_string(node->move)).c_str());
+                EscapeQuotes(to_string(node->move, s.players[node->just_moved])).c_str());
         fprintf(fp, "%*c  shape = record\n", indent*2, ' ');
         fprintf(fp, "%*c  style = filled\n", indent*2, ' ');
         std::string color;
@@ -274,7 +264,7 @@ struct MCTSAgent {
 
         for (auto &child : node->children) {
             ++n;
-            writeNodeDefinitions(fp, child, n, indent+1);
+            writeNodeDefinitions(fp, s, child, n, indent+1);
         }
     }
 
@@ -287,7 +277,7 @@ struct MCTSAgent {
         }
     }
 
-    void writeDot(Node::Ptr root) {
+    void writeDot(const State &s, Node::Ptr root) {
         root->sort();
 
         std::string fname("ismcts/ismcts.");
@@ -299,7 +289,7 @@ struct MCTSAgent {
         fprintf(fp, "  rankdir = LR;\n");
 
         int n = 0;
-        writeNodeDefinitions(fp, root, n);
+        writeNodeDefinitions(fp, s, root, n);
         n = 0;
         writeNodeConnections(fp, root, n);
         fprintf(fp, "}\n");

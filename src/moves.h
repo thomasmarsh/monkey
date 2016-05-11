@@ -59,6 +59,8 @@ struct Moves {
         checkCard(i, player.hand.at(i));
     }
 
+    Moves(const Moves&) = delete;
+
     ~Moves() {
         TRACE();
         for (auto p : allocated) {
