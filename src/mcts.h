@@ -3,6 +3,7 @@
 #include "agent.h"
 #include "naive.h"
 #include "mcts_node.h"
+#include "dot.h"
 
 // Randomization policy for MCTSAgent
 enum class MCTSRand {
@@ -20,8 +21,29 @@ static std::string to_string(MCTSRand p) {
 };
 
 struct MCTSAgent {
-    using MoveList = Node::MoveList;
+    struct NodeMove {
+        Move move;
+        std::vector<std::vector<Move::Ptr>> allocated;
+
+        NodeMove() : move(Move::Null()) {}
+        NodeMove(const Move &m) : move(m) {}
+
+        ~NodeMove() {
+            for (const auto &group : allocated) {
+                for (auto *p : group) {
+                    delete p;
+                }
+            }
+        }
+
+        bool operator == (const NodeMove &rhs) const { return move == rhs.move; }
+        bool isNull() const { return move.isNull(); }
+        std::string str() const { return to_string(move); }
+    };
+
+    using MoveList = Node<NodeMove>::MoveList;
     using StatePtr = std::shared_ptr<State>;
+    using NodePtr  = Node<NodeMove>::Ptr;
 
     size_t itermax;
     size_t num_trees;
@@ -52,40 +74,37 @@ struct MCTSAgent {
         ForwardState(*state);
     }
 
-    void loop(Node::Ptr root, const State &root_state) {
+    void loop(NodePtr root, const State &root_state) {
 
-        // COPY HERE
-        auto initial = std::make_shared<State>(root_state.players.size());
-        *initial = root_state;
+        auto initial = std::make_shared<State>(root_state);
         initial->randomizeHiddenState();
 
         for (int i=0; i < itermax; ++i) {
-            WARN("iteration {}/{}", i+1, itermax);
             initial = iterate(root, initial, i);
         }
     }
 
     void move(State &root_state) {
         assert(!root_state.gameOver());
-        auto move = parallelSearch(root_state);
+        auto m = parallelSearch(root_state);
         //auto move = singleSearch(root_state);
-        root_state.perform(&move);
+        root_state.perform(&m.move);
     }
 
-    std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) {
+    std::vector<std::pair<NodeMove,size_t>> iterateAndMerge(const State &root_state) {
         ScopedLogLevel lock(LogContext::Level::warn);
 
-        std::vector<Node::Ptr> root_nodes(num_trees);
+        std::vector<NodePtr> root_nodes(num_trees);
         std::vector<std::thread> t(num_trees);
 
         for (size_t i=0; i < num_trees; ++i) {
-            root_nodes[i] = Node::New(Move::Null(), Cards{0}, nullptr, -1);
+            root_nodes[i] = Node<NodeMove>::New(Move::Null(), Cards{0}, nullptr, -1);
             t[i] = std::thread([this, root_state, root=root_nodes[i]] {
                 this->loop(root, root_state);
             });
         }
 
-        std::vector<std::pair<Move,size_t>> merge;
+        std::vector<std::pair<NodeMove,size_t>> merge;
         for (size_t i=0; i < num_trees; ++i) {
             t[i].join();
         }
@@ -107,22 +126,22 @@ struct MCTSAgent {
         return merge;
     }
 
-    Move parallelSearch(const State &root_state) {
+    NodeMove parallelSearch(const State &root_state) {
         auto merge = iterateAndMerge(root_state);
 
         // This can happen at the last move; not entirely sure why.
         if (merge.empty()) {
-            return Move::Pass();
+            return NodeMove(Move::Pass());
         }
 
-        auto best = Move::Null();
+        auto best = NodeMove(Move::Null());
         unsigned long high = 0;
         WARN("player {} children:", root_state.current().id);
         Sort(merge, [](const auto &a, const auto &b) {
             return a.second > b.second;
         });
         for (const auto &e : merge) {
-            WARN(" - {} {}", e.second, to_string(e.first, root_state.current()));
+            WARN(" - {} {}", e.second, to_string(e.first.move, root_state.current()));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;
@@ -134,9 +153,9 @@ struct MCTSAgent {
         return best;
     }
 
-    Move singleSearch(const State &root_state) {
+    NodeMove singleSearch(const State &root_state) {
         ScopedLogLevel l(LogContext::Level::warn);
-        auto root = Node::New(Move::Null(), Cards{0}, nullptr, -1);
+        auto root = Node<NodeMove>::New(Move::Null(), Cards{0}, nullptr, -1);
 
         loop(root, root_state);
 
@@ -160,26 +179,35 @@ struct MCTSAgent {
         return (*best)->move;
     }
 
-    StatePtr Clone(const StatePtr &p) {
-        auto state = std::make_shared<State>(p->players.size());
-        *state = *p;
-        return state;
-    }
-
     // Randomize the hidden state.
     std::pair<StatePtr,StatePtr> determinize(const StatePtr &root_state, size_t i) {
         auto initial = root_state;
-        auto state = Clone(root_state);
+        auto state = std::make_shared<State>(*root_state);
         if (policy == MCTSRand::ALWAYS || (policy == MCTSRand::ONCE && i == 0)) {
             state->randomizeHiddenState();
-            initial = Clone(state);
+            initial = std::make_shared<State>(*state);
         }
         return {initial, state};
     }
 
-    std::pair<StatePtr, Node::Ptr> select(StatePtr state, Node::Ptr node) {
+    // TODO: generalize Moves to take move type argument, but need careful handling of `allocated`
+    std::vector<NodeMove> search(StatePtr state, NodePtr node) {
         Moves m(*state);
-        auto moves = std::move(m.moves);
+        auto found = std::move(m.moves);
+
+        // Expensive:
+        std::vector<NodeMove> result;
+        std::copy(found.begin(), found.end(), std::back_inserter(result));
+
+        node->move.allocated.push_back(std::move(m.allocated));
+        m.allocated.clear();
+        std::vector<NodeMove> moves;
+        return result;
+    }
+
+    std::pair<StatePtr, NodePtr> select(StatePtr state, NodePtr node) {
+        auto moves = search(state, node);
+
         auto untried = node->getUntriedMoves(moves);
 
         while (!moves.empty()) {
@@ -187,34 +215,33 @@ struct MCTSAgent {
                 return expand(state, node, untried);
             }
             node = node->selectChildUCB(state, moves, exploration);
-            makeMove(node->move, state);
+            makeMove(node->move.move, state);
 
-            Moves m2(*state);
-            moves = std::move(m2.moves);
+            moves = search(state, node);
             untried = node->getUntriedMoves(moves);
         }
         return {state, node};
     }
 
     // Create a new node to explore.
-    std::pair<StatePtr, Node::Ptr> expand(StatePtr state,
-                                       Node::Ptr node,
-                                       MoveList &untried)
+    std::pair<StatePtr, NodePtr> expand(StatePtr state,
+                                        NodePtr node,
+                                        MoveList &untried)
     {
         if (!untried.empty()) {
             auto m = untried[urand(untried.size())];
             auto &p = state->current();
-            makeMove(m, state);
-            node = node->addChild(m, {m.card}, p.id);
+            makeMove(m.move, state);
+            node = node->addChild(m, {m.move.card}, p.id);
         }
         return {state, node};
     }
 
-    StatePtr iterate(Node::Ptr root, StatePtr initial, int i) {
+    StatePtr iterate(NodePtr root, StatePtr initial, int i) {
         auto node = root;
 
         // Determinize
-        StatePtr state;
+        auto state = initial;
         std::tie(initial, state) = determinize(initial, i);
 
         // Find next node
@@ -232,67 +259,12 @@ struct MCTSAgent {
         return initial;
     }
 
-    void log(Node::Ptr root, const State &state) {
+    void log(NodePtr root, const State &state) {
         ScopedLogLevel l(LogContext::Level::debug);
         WARN("exploration tree:");
         root->printTree();
         WARN("player {} children:", state.current().id);
         root->printChildren();
-        writeDot(state, root);
-    }
-
-    void writeNodeDefinitions(FILE *fp, const State &s, Node::Ptr node, int &n, int indent=1) {
-        int m = n;
-        fprintf(fp, "%*cn%d [\n", indent*2, ' ', m);
-        fprintf(fp, "%*c  label = \"%s | %s\"\n",
-                indent*2, ' ', 
-                node->shortRepr().c_str(),
-                EscapeQuotes(to_string(node->move, s.players[node->just_moved])).c_str());
-        fprintf(fp, "%*c  shape = record\n", indent*2, ' ');
-        fprintf(fp, "%*c  style = filled\n", indent*2, ' ');
-        std::string color;
-        switch (node->just_moved) {
-        case 0: color = "fc1e33"; break;
-        case 1: color = "ff911e"; break;
-        case 2: color = "21abd8"; break;
-        case 3: color = "40ee1c"; break;
-        }
-        if (!color.empty()) {
-            fprintf(fp, "%*c  fillcolor = \"#%s\"\n", indent*2, ' ', color.c_str());
-        }
-        fprintf(fp, "%*c];\n", indent*2, ' ');
-
-        for (auto &child : node->children) {
-            ++n;
-            writeNodeDefinitions(fp, s, child, n, indent+1);
-        }
-    }
-
-    void writeNodeConnections(FILE *fp, Node::Ptr node, int &n) {
-        int m = n;
-        for (auto &child : node->children) {
-            ++n;
-            fprintf(fp, "  n%d -> n%d;\n", m, n);
-            writeNodeConnections(fp, child, n);
-        }
-    }
-
-    void writeDot(const State &s, Node::Ptr root) {
-        root->sort();
-
-        std::string fname("ismcts/ismcts.");
-        fname += std::to_string(move_count);
-        FILE *fp = fopen(fname.c_str(), "w");
-        assert(fp);
-
-        fprintf(fp, "digraph G {\n");
-        fprintf(fp, "  rankdir = LR;\n");
-
-        int n = 0;
-        writeNodeDefinitions(fp, s, root, n);
-        n = 0;
-        writeNodeConnections(fp, root, n);
-        fprintf(fp, "}\n");
-        fclose(fp);
+        DotWriter<Node<NodeMove>>(state, root, move_count);
     }
 };

@@ -26,7 +26,7 @@ struct Move {
         return action == rhs.action &&
                card   == rhs.card   &&
                arg    == rhs.arg    &&
-               next   == rhs.next;
+               *next  == *rhs.next;
     }
 } __attribute__ ((__packed__));
 

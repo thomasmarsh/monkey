@@ -17,7 +17,7 @@ void Play() {
     RandomAgent ragent;
     NaiveAgent naive;
     MCAgent flatmc;
-    MCTSAgent mcts;
+    MCTSAgent mcts(100);
 
     while (!s.gameOver()) {
         LOG("");

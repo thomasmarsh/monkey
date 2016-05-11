@@ -3,9 +3,9 @@
 #include "util.h"
 
 // TODO: generalize Node to Node<S, M>
-struct Node : std::enable_shared_from_this<Node> {
-    using M = Move;
 
+template <typename M>
+struct Node : std::enable_shared_from_this<Node<M>> {
     using Ptr = std::shared_ptr<Node>;
     using wPtr = std::weak_ptr<Node>;
 
@@ -38,10 +38,10 @@ struct Node : std::enable_shared_from_this<Node> {
 
     void reset(const M &m, const Cards &c, const Ptr &_parent, int p) {
         TRACE();
-        move = m;
-        cards = c;
+        move   = m;
+        cards  = c;
         parent = _parent;
-        wins = 0;
+        wins   = 0;
         visits = 0;
         avails = 1;
         just_moved = p;
@@ -130,10 +130,9 @@ struct Node : std::enable_shared_from_this<Node> {
         }
     }
 
-    std::string repr() const {
+    std::string repr(const std::string &move_repr) const {
         return fmt::format("[w/v/a: {:4}/{:4}/{:4} p={} m={}",
-                           wins, visits, avails, just_moved,
-                           to_string(move));
+                           wins, visits, avails, just_moved, move_repr);
     }
 
     std::string shortRepr() const {
@@ -142,12 +141,12 @@ struct Node : std::enable_shared_from_this<Node> {
 
     void printChildren() const {
         for (const auto &n : children) {
-            WARN(" - {}", n->repr());
+            WARN(" - {}", n->repr(move.str()));
         }
     }
 
     void printTree(size_t indent=0) const {
-        WARN("{}", (indentStr(indent) + repr()));
+        WARN("{}", (indentStr(indent) + repr(move.str())));
 
         for (const auto &c : children) {
             c->printTree(indent+1);
