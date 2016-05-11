@@ -14,7 +14,7 @@ TEST_CASE("perform a move", "[state]") {
     s.init();
     Moves m(s);
     REQUIRE(!m.moves.empty());
-    s.perform(&m.moves[0]);
+    s.perform(m.moves[0]);
 }
 
 TEST_CASE("perform a round", "[state]") {
@@ -25,7 +25,7 @@ TEST_CASE("perform a round", "[state]") {
         Moves m(s);
         REQUIRE(!m.moves.empty());
         const auto &p = s.current();
-        s.perform(&m.moves[0]);
+        s.perform(m.moves[0]);
         p.visible.print();
     }
     REQUIRE(s.challenge.round.finished());
@@ -41,7 +41,7 @@ TEST_CASE("perform a challenge", "[state]") {
             Moves m(s);
             REQUIRE(!m.moves.empty());
             auto &move = m.moves[urand(m.moves.size())];
-            s.perform(&move);
+            s.perform(move);
         }
         s.challenge.round.reset();
         s.validateCards();
@@ -68,7 +68,7 @@ TEST_CASE("play a game", "[state]") {
                     LOG("    - {}", to_string(move, p));
                 }
                 auto &move = m.moves[urand(m.moves.size())];
-                s.perform(&move);
+                s.perform(move);
             }
             s.challenge.round.reset();
             s.validateCards();

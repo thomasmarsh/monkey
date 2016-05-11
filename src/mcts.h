@@ -22,19 +22,14 @@ static std::string to_string(MCTSRand p) {
 
 struct MCTSAgent {
     struct NodeMove {
+        // This mirrors the Move linked list.
+        CardRef cards[2]; // TODO
+
+        // The move that got us to this node.
         Move move;
-        std::vector<std::vector<Move::Ptr>> allocated;
 
         NodeMove() : move(Move::Null()) {}
         NodeMove(const Move &m) : move(m) {}
-
-        ~NodeMove() {
-            for (const auto &group : allocated) {
-                for (auto *p : group) {
-                    delete p;
-                }
-            }
-        }
 
         bool operator == (const NodeMove &rhs) const { return move == rhs.move; }
         bool isNull() const { return move.isNull(); }
@@ -70,7 +65,7 @@ struct MCTSAgent {
 
     void makeMove(const Move &move, StatePtr &state) {
         ForwardState(*state);
-        state->perform(&move);
+        state->perform(move);
         ForwardState(*state);
     }
 
@@ -88,7 +83,7 @@ struct MCTSAgent {
         assert(!root_state.gameOver());
         auto m = parallelSearch(root_state);
         //auto move = singleSearch(root_state);
-        root_state.perform(&m.move);
+        root_state.perform(m.move);
     }
 
     std::vector<std::pair<NodeMove,size_t>> iterateAndMerge(const State &root_state) {
@@ -159,7 +154,7 @@ struct MCTSAgent {
 
         loop(root, root_state);
 
-        //log(root, root_state);
+        log(root, root_state);
 
         // This can happen at the last move; not entirely sure why.
         if (root->children.empty()) {
@@ -199,8 +194,6 @@ struct MCTSAgent {
         std::vector<NodeMove> result;
         std::copy(found.begin(), found.end(), std::back_inserter(result));
 
-        node->move.allocated.push_back(std::move(m.allocated));
-        m.allocated.clear();
         std::vector<NodeMove> moves;
         return result;
     }
@@ -232,7 +225,7 @@ struct MCTSAgent {
             auto m = untried[urand(untried.size())];
             auto &p = state->current();
             makeMove(m.move, state);
-            node = node->addChild(m, {m.move.card}, p.id);
+            node = node->addChild(m, {m.move.index()}, p.id);
         }
         return {state, node};
     }

@@ -119,6 +119,7 @@ struct MCAgent {
     void dispatchSearch(const Moves &m, MoveStats &stats) {
         ScopedLogLevel l(LogContext::Level::warn);
         size_t samples = mc_len * m.moves.size() / concurrency;
+        WARN("samples = {} ({} * {} / {})", samples, mc_len, m.moves.size(), concurrency);
         if (concurrency == 1) {
             search(m, stats, samples);
         } else {
@@ -134,14 +135,14 @@ struct MCAgent {
 
         // If only one move, take that one without searching.
         if (m.moves.size() == 1) {
-            s.perform(&m.moves[0]);
+            s.perform(m.moves[0]);
             return;
         }
 
         MoveStats stats;
         dispatchSearch(m, stats);
         logStats(m, stats);
-        s.perform(&m.moves[findBest(stats)]);
+        s.perform(m.moves[findBest(stats)]);
     }
 
     using SortedStats = std::vector<std::pair<size_t,MoveStat>>;

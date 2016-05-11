@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstddef>
 
 // Unfortunately the intrinic is too smart for our needs
 //#define LOG2(x)   ((sizeof(x)*8-1)-__builtin_clzll((uint64_t)(x)))

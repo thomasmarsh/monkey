@@ -374,24 +374,24 @@ struct State {
         challenge.round.concede();
     }
 
-    void discardOne(const Move &move) {
+    void discardOne(const Move::Step &step) {
         TRACE();
         auto &hand = current().hand;
-        assert(move.arg < hand.size());
-        auto c = hand.draw(move.arg);
+        assert(step.arg < hand.size());
+        auto c = hand.draw(step.arg);
         const auto &card = Card::Get(c);
         LOG("<player {}:discard {}>", current().id, to_string(card));
         deck->discardCard(card);
 
-        if (move.card == Move::null) {
+        if (step.index == Move::null) {
             current().discard_two = false;
         }
     }
 
-    void drawCard(const Move &move) {
+    void drawCard(const Move::Step &step) {
         TRACE();
         CardRef c;
-        switch (move.arg) {
+        switch (step.arg) {
         case 0: c = deck->drawCharacter(); break;
         case 1: c = deck->drawSkill(); break;
         default: ERROR("unhandled");
@@ -400,9 +400,9 @@ struct State {
         current().hand.insert(c);
     }
 
-    void stealCard(const Move &move) {
+    void stealCard(const Move::Step &step) {
         TRACE();
-        auto &other = players[move.arg];
+        auto &other = players[step.arg];
         auto c = other.hand.drawRandom();
         LOG("<player {}:steal {} {}>",
             current().id, other.id, to_string(Card::Get(c)));
@@ -427,29 +427,29 @@ struct State {
         deck->discardCard(Card::Get(c));
     }
 
-    void tradeHand(const Move &move) {
+    void tradeHand(const Move::Step &step) {
         TRACE();
-        std::swap(current().hand, players[move.arg].hand);
+        std::swap(current().hand, players[step.arg].hand);
     }
 
-    void handleAction(const Move &move) {
+    void handleAction(const Move::Step &step) {
         TRACE();
-        switch (move.action) {
+        switch (step.action) {
         case Action::NONE:
         case Action::PLAY_WEAPON:
         case Action::PLAY_STYLE:
             // Will be handled by playCard()
-            assert(move.card != Move::null);
+            assert(step.index != Move::null);
             break;
         case Action::PASS:               pass(); break;
         case Action::CONCEDE:            concede(); break;
-        case Action::DISCARD_ONE:        discardOne(move); break;
-        case Action::DRAW_CARD:          drawCard(move); break;
-        case Action::STEAL_CARD:         stealCard(move); break;
-        case Action::KNOCKOUT_CHARACTER: knockoutChar(move.arg); break;
-        case Action::KNOCKOUT_STYLE:     knockoutStyle(move.arg); break;
-        case Action::KNOCKOUT_WEAPON:    knockoutWeapon(move.arg); break;
-        case Action::TRADE_HAND:         tradeHand(move); break;
+        case Action::DISCARD_ONE:        discardOne(step); break;
+        case Action::DRAW_CARD:          drawCard(step); break;
+        case Action::STEAL_CARD:         stealCard(step); break;
+        case Action::KNOCKOUT_CHARACTER: knockoutChar(step.arg); break;
+        case Action::KNOCKOUT_STYLE:     knockoutStyle(step.arg); break;
+        case Action::KNOCKOUT_WEAPON:    knockoutWeapon(step.arg); break;
+        case Action::TRADE_HAND:         tradeHand(step); break;
         case Action::CLEAR_FIELD:        discardVisible(); break;
 
         case Action::DISARM_CHARACTER:
@@ -457,7 +457,7 @@ struct State {
         case Action::PLAY_DOUBLESTYLE:
         case Action::CAPTURE_WEAPON:
         case Action::PLAY_CHARACTER:
-            //WARN("unimplemented action: {}", to_string(move.action));
+            //WARN("unimplemented action: {}", to_string(step.action));
             break;
 
         case Action::E_DRAW_TWO_SKILLS:
@@ -468,14 +468,14 @@ struct State {
         case Action::E_INVERT_VALUE:
         case Action::E_DISCARD_TWO:
         case Action::E_CHAR_BONUS:
-            ERROR("received event: {}", to_string(move.action));
+            ERROR("received event: {}", to_string(step.action));
             break;
         }
     }
 
 #pragma mark - Play Move
 
-    void playCard(const Move &move, const Card &card) {
+    void playCard(const Move::Step &step, const Card &card) {
         TRACE();
         auto &p = current();
         switch (card.type) {
@@ -483,10 +483,10 @@ struct State {
             p.placeCharacter(card);
             break;
         case STYLE:
-            p.placeStyle(card, move.arg);
+            p.placeStyle(card, step.arg);
             break;
         case WEAPON:
-            p.placeWeapon(card, move.arg);
+            p.placeWeapon(card, step.arg);
             break;
         case WRENCH:
             deck->discardCard(card);
@@ -498,27 +498,28 @@ struct State {
         }
     }
 
-    void processMove(const Move &move) {
+    void processStep(const Move::Step &step) {
         TRACE();
-        if (move.card != Move::null) {
-            assert(move.card < NUM_CARDS);
-            auto c = current().hand.draw(move.card);
+        assert(!step.isNull());
+        if (step.index != Move::null) {
+            assert(step.index < NUM_CARDS);
+            auto c = current().hand.draw(step.index);
             const auto &card = Card::Get(c);
             LOG("<player {}:play {}>", current().id, to_string(card));
-            handleAction(move);
-            playCard(move, card);
+            handleAction(step);
+            playCard(step, card);
         } else {
-            handleAction(move);
+            handleAction(step);
         }
     }
 
-    void perform(const Move *move) {
+    void perform(const Move &move) {
         TRACE();
         // TODO: assert !round_finished, !gameOver, etc.
-        assert(move);
-        while (move) {
-            processMove(*move);
-            move = move->next;
+        assert(!move.isNull());
+        processStep(move.first);
+        if (!move.second.isNull()) {
+            processStep(move.second);
         }
 
         step();

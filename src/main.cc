@@ -5,12 +5,12 @@
 #include "naive.h"
 #include "flatmc.h"
 #include "mcts.h"
-
 #include "ui.h"
 
+#include <unistd.h>
+
 void Play() {
-    MonkeyChallenge mk(4);
-    State s(4);
+    State s(3);
     s.init();
     size_t c = 0;
 
@@ -36,9 +36,9 @@ void Play() {
 
                 switch (s.current().id) {
                 case 0: ragent.move(s); break;
-                case 1: naive.move(s); break;
+                case 1: mcts.move(s); break;
                 case 2: flatmc.move(s); break;
-                case 3: mcts.move(s); break;
+                case 3: naive.move(s); break;
                 }
 #ifndef NO_LOGGING
                 for (const auto &p : s.players) {

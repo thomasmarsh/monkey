@@ -9,10 +9,10 @@ inline size_t RandomMove(const Moves &m, State &s) {
     assert(!m.moves.empty());
     size_t i = urand(m.moves.size());
     auto move = m.moves[i];
-    if (move.action == Action::CONCEDE) {
+    if (move.isConcede()) {
         move = Move::Pass();
     }
-    s.perform(&move);
+    s.perform(move);
     return i;
 }
 

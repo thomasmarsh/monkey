@@ -32,10 +32,10 @@ struct NaiveAgent {
     }
 
     int valueForMove(const Move &m, const State &s) const {
-        if (m.card == Move::null) {
+        if (m.index() == Move::null) {
             return 0;
         }
-        return cardValue(Card::Get(m.card), s);
+        return cardValue(Card::Get(m.index()), s);
     }
 
     void move(State &s) {
@@ -64,6 +64,6 @@ struct NaiveAgent {
                 break;
             }
         }
-        s.perform(&move);
+        s.perform(move);
     }
 };

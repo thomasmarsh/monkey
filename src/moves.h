@@ -8,30 +8,27 @@
 
 #include <cassert>
 
-inline std::string to_string(const Move &m, const Player &player) {
-    auto s = fmt::format("{{ {} {{ {} }} {} }}", to_string(m.action),
-                         m.card == Move::null
-                             ? std::string("null")
-                             : to_string(Card::Get(player.hand.at(m.card))),
-                         m.arg == Move::null
-                             ? std::string("null")
-                             : std::to_string(m.arg));
+inline std::string to_string(const Move::Step &s, const Player &player) {
+    return fmt::format("{{ {} {{ {} }} {} }}", to_string(s.action),
+                       s.index == Move::null
+                           ? std::string("null")
+                           : to_string(Card::Get(player.hand.at(s.index))),
+                       s.arg == Move::null
+                           ? std::string("null")
+                           : std::to_string(s.arg));
+}
 
-    // TODO: repair the print of chained moves
-    //auto hand = player.hand;
-    //hand.draw(m.card);
-    auto *move = m.next;
-    while (move) {
-        s += " " + to_string(*move, player);
-        //hand.draw(move->card);
-        move = move->next;
+inline std::string to_string(const Move &m, const Player &player) {
+    if (m.second.isNull()) {
+        return to_string(m.first, player);
     }
-    return s;
+    return fmt::format("{{ {} {} }}",
+                       to_string(m.first, player),
+                       to_string(m.second, player));
 }
 
 struct Moves {
     std::vector<Move> moves;
-    std::vector<Move::Ptr> allocated;
     const State &state;
     const Player &player;
     Player::Aggregate exposed;
@@ -51,7 +48,7 @@ struct Moves {
     }
 
     // Find all moves for card i in hand.
-    explicit Moves(const State &s, size_t i)
+    explicit Moves(const State &s, uint8_t i)
     : Moves(s, false)
     {
         TRACE();
@@ -59,54 +56,26 @@ struct Moves {
         checkCard(i, player.hand.at(i));
     }
 
-    Moves(const Moves&) = delete;
-
-    ~Moves() {
-        TRACE();
-        for (auto p : allocated) {
-            delete p;
-        }
+    void add(const Move&& move) {
+        moves.emplace_back(move);
     }
 
-    void add(const Move&& m) {
-        moves.emplace_back(m);
+    void add(const Move::Step&& first, const Move::Step&& second=Move::Step()) {
+        assert(first.index <= 0xFF);
+        assert(first.arg   <= 0xFF);
+        add({first, second});
     }
 
-    void add(Action a,
-             size_t i=Move::null,
-             size_t arg=Move::null,
-             Move::Ptr next=nullptr)
-    {
-        TRACE();
-        assert(i <= 0xFF);
-        assert(arg <= 0xFF);
-        moves.emplace_back(Move {a, uint8_t(i), uint8_t(arg), next});
-    }
-
-    Move::Ptr alloc(Action a,
-                    size_t i=Move::null,
-                    size_t arg=Move::null,
-                    Move::Ptr next=nullptr)
-    {
-        TRACE();
-        assert(i <= 0xFF);
-        assert(arg <= 0xFF);
-        if (allocated.capacity() < 16) { allocated.reserve(16); }
-        auto *p = new Move {a, uint8_t(i), uint8_t(arg), next};
-        allocated.push_back(p);
-        return p;
-    }
-
-    std::shared_ptr<Move> findNextAction(size_t, const Card &card) {
+    std::shared_ptr<Move> findNextAction(uint8_t, const Card &card) {
         TRACE();
         WARN("unhandled");
         return nullptr;
     }
 
-    void findCardMoves(size_t i, const Card &card) {
+    void findCardMoves(uint8_t i, const Card &card) {
         TRACE();
 
-        size_t initial_count = moves.size();
+        auto initial_count = moves.size();
 
         switch (card.arg_type) {
         case ArgType::NONE:
@@ -143,7 +112,7 @@ struct Moves {
         }
 
         if (card.type == CHARACTER && (moves.size() - initial_count) == 0) {
-            add(Action::NONE, i);
+            add({Action::NONE, i});
         }
     }
 
@@ -179,25 +148,25 @@ struct Moves {
         return player.affinity == card.affinity;
     }
 
-    void maskedMoves(uint64_t mask, size_t i, const Card &card) {
+    void maskedMoves(uint64_t mask, uint8_t i, const Card &card) {
         TRACE();
         if (!mask) { return; }
-        for (size_t c : EachBit(mask)) {
-            add(card.action, i, c);
+        for (uint8_t c : EachBit(mask)) {
+            add({ card.action, i, c});
         }
     }
 
-    std::vector<size_t> findStylesFromIndex(size_t i, const Card &card) {
+    std::vector<uint8_t> findStylesFromIndex(uint8_t i, const Card &card) {
         auto nc  = player.hand.characters.size();
         auto &skills = player.hand.skills;
 
-        std::vector<size_t> matches;
+        std::vector<uint8_t> matches;
         matches.reserve(skills.size());
 
         // The current index in the skills portion of the hand is `i - nc`. We forward to that
         // position + 1, so we are at the next card in the hand.
         auto ns = skills.size();
-        for (size_t j=(i-nc)+1; j < ns; ++j) {
+        for (uint8_t j=(i-nc)+1; j < ns; ++j) {
             auto &c = Card::Get(skills[j]);
             if (c.type == STYLE) {
                 // We need to add back `nc` to restore it from a skill- to a hand relative index.
@@ -207,7 +176,7 @@ struct Moves {
         return matches;
     }
 
-    void maskedDoubleMoves(uint64_t mask, size_t i, const Card &card) {
+    void maskedDoubleMoves(uint64_t mask, uint8_t i, const Card &card) {
         TRACE();
 
         if (!mask) {
@@ -231,49 +200,49 @@ struct Moves {
         played_double_style = true;
 
         // Finally, iterate over all the cards in hand that accept double styles.
-        for (size_t c : EachBit(mask)) {
+        for (uint8_t c : EachBit(mask)) {
             // For each other card in hand
             for (auto j : styles) {
                 assert(j > i);
-                add(card.action, j, c,
-                    alloc(card.action, i, c));
+                add({{card.action, j, c},
+                     {card.action, i, c}});
             }
         }
     }
 
-    void visibleOrHoldMoves(size_t i, const Card &card) {
+    void visibleOrHoldMoves(uint8_t i, const Card &card) {
         TRACE();
-        size_t x = 0;
+        uint8_t x = 0;
         auto n = player.visible.num_characters;
         assert(n == player.visible.characters.size());
         for (; x < n; ++x) {
-            add(card.action, i, x);
+            add({card.action, i, x});
         }
         // The last move (x > num chars) indicates a hold.
-        add(card.action, i, x);
+        add({card.action, i, x});
     }
 
-    void opponentMoves(size_t i, const Card &card) {
+    void opponentMoves(uint8_t i, const Card &card) {
         TRACE();
-        for (size_t p=0; p < state.players.size(); ++p) {
+        for (uint8_t p=0; p < state.players.size(); ++p) {
             if (p != player.id) {
-                add(card.action, i, p);
+                add({card.action, i, p});
             }
         }
     }
 
-    void opponentHandMoves(size_t i, const Card &card) {
+    void opponentHandMoves(uint8_t i, const Card &card) {
         TRACE();
-        for (size_t p=0; p < state.players.size(); ++p) {
+        for (uint8_t p=0; p < state.players.size(); ++p) {
             if (p != player.id) {
                 if (!state.players[p].hand.empty()) {
-                    add(card.action, i, p);
+                    add({card.action, i, p});
                 }
             }
         }
     }
 
-    void handMoves(size_t i, const Card &card) {
+    void handMoves(uint8_t i, const Card &card) {
         TRACE();
         if (card.action == Action::PLAY_CHARACTER) {
             ScopedLogLevel l(LogContext::Level::warn);
@@ -283,19 +252,19 @@ struct Moves {
         }
     }
 
-    void addDoubleChar(State &clone, size_t i, const Card &c1, size_t j, CardRef c) {
+    void addDoubleChar(State &clone, uint8_t i, const Card &c1, uint8_t j, CardRef c) {
         Moves m2(clone, j);
         for (const auto &m : m2.moves) {
-            add(Action::NONE, i, Move::null,
-                alloc(m.action, m.card, m.arg));
+            assert(m.second.isNull());
+            add({{Action::NONE, i, Move::null}, m.first});
         }
     }
 
-    void charHandMoves(size_t i, const Card &card) {
+    void charHandMoves(uint8_t i, const Card &card) {
         LOG("-- begin evaluation --");
         auto clone = state;
-        clone.processMove(Move{Action::NONE, uint8_t(i), Move::null, nullptr});
-        for (size_t j=0; j < player.hand.characters.size(); ++j) {
+        clone.processStep(Move::Step(Action::NONE, i));
+        for (uint8_t j=0; j < player.hand.characters.size(); ++j) {
             auto c = player.hand.characters[j];
             if (j < i) {
                 addDoubleChar(clone, i, card, j, c);
@@ -306,46 +275,46 @@ struct Moves {
         LOG("-- end evaluation --");
     }
 
-    void allHandMoves(size_t i, const Card &card) {
+    void allHandMoves(uint8_t i, const Card &card) {
         TRACE();
-        for (size_t c=0; c < player.hand.size(); ++c) {
+        for (uint8_t c=0; c < player.hand.size(); ++c) {
             // Need to be careful about the current card.
             if (c < i) {
-                add(card.action, i, c);
+                add({card.action, i, c});
             } else if (c > i) {
-                add(card.action, i, c-1);
+                add({card.action, i, uint8_t(c-1)});
             }
         }
     }
 
-    void drawPileMoves(size_t i, const Card &card) {
+    void drawPileMoves(uint8_t i, const Card &card) {
         TRACE();
         // 0 = characters, 1 = skills
-        add(card.action, i, 0);
-        add(card.action, i, 1);
+        add({card.action, i, 0});
+        add({card.action, i, 1});
     }
 
-    void discardTwo(size_t i) {
+    void discardTwo(uint8_t i) {
         TRACE();
         if (player.hand.empty()) {
             ERROR("unexpected empty hand");
         }
         if (player.hand.size() == 1) {
-            add(Action::DISCARD_ONE, Move::null, 0);
+            add({Action::DISCARD_ONE, Move::null, 0});
             return;
         }
 
-        for (size_t i=0; i < player.hand.size()-1; ++i) {
-            for (size_t j=i+1; j < player.hand.size(); ++j) {
-                add(Action::DISCARD_ONE, Move::null, j,
-                    alloc(Action::DISCARD_ONE, Move::null, i));
+        for (uint8_t i=0; i < player.hand.size()-1; ++i) {
+            for (uint8_t j=i+1; j < player.hand.size(); ++j) {
+                add({{Action::DISCARD_ONE, Move::null, j},
+                     {Action::DISCARD_ONE, Move::null, i}});
             }
         }
     }
 
     void firstCharacterMove() {
         TRACE();
-        size_t i = 0;
+        uint8_t i = 0;
         for (const auto c : player.hand.characters) {
             findCardMoves(i, Card::Get(c));
             ++i;
@@ -363,14 +332,14 @@ struct Moves {
         }
     }
 
-    void checkCard(size_t i, CardRef c) {
+    void checkCard(uint8_t i, CardRef c) {
         const auto &card = Card::Get(c);
         if (canPlayCard(card)) {
             findCardMoves(i, card);
         }
     }
 
-    void iterateCards(size_t &i, const Cards &cards) {
+    void iterateCards(uint8_t &i, const Cards &cards) {
         for (const auto c : cards) {
             checkCard(i, c);
             ++i;
@@ -378,7 +347,7 @@ struct Moves {
     }
 
     void iterateHand() {
-        size_t i = 0;
+        uint8_t i = 0;
         const auto &hand = player.hand;
         iterateCards(i, hand.characters);
         iterateCards(i, hand.skills);
