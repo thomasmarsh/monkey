@@ -22,17 +22,12 @@ struct Game {
     }
 
     void move() {
-        RandomAgent ragent;
-        NaiveAgent naive;
-        MCAgent flatmc;
-        MCTSAgent mcts(100);
-
-        mcts.move(state);
+        MCTSAgent(100).move(state);
         //switch (state.current().id) {
-        //case 0: ragent.move(state); break;
-        //case 1: mcts.move(state); break;
-        //case 2: flatmc.move(state); break;
-        //case 3: naive.move(state); break;
+        //case 0: RandomAgent().move(state); break;
+        //case 1: MCTSAgent(100).move(state); break;
+        //case 2: MCAgent().move(state); break;
+        //case 3: NaiveAgent().move(state); break;
         // }
     }
 

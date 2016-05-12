@@ -162,10 +162,9 @@ struct GameUI : public std::enable_shared_from_this<GameUI> {
     void renderCard(int x, int y, const ViewCard &c) {
         TRACE();
 
-        auto proto = Card::Get(c.card).prototype;
         sf::Sprite sprite;
-        assert(proto < UICard::cards.size());
-        sprite.setTexture(UICard::cards[proto].texture());
+        assert(c.card < UICard::cards.size());
+        sprite.setTexture(UICard::cards[c.card].texture());
         auto tx = UICard::width >> 1;
         auto ty = UICard::height >> 1;
         sprite.setOrigin(tx, ty);

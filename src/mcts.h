@@ -82,7 +82,6 @@ struct MCTSAgent {
     }
 
     void loop(NodeT::Ptr root, const State &root_state) {
-        SCOPED_LOG(warn);
         ScopedLogLevel l(LogContext::Level::warn);
 
         auto initial = State::New(root_state);
