@@ -1,65 +1,8 @@
-#include "log.h"
-#include "moves.h"
-#include "cards.h"
-#include "util.h"
-#include "naive.h"
-#include "flatmc.h"
-#include "mcts.h"
 #include "ui.h"
 
 #include <unistd.h>
 
-void Play() {
-    State s(3);
-    s.init();
-    size_t c = 0;
-
-    RandomAgent ragent;
-    NaiveAgent naive;
-    MCAgent flatmc;
-    MCTSAgent mcts(100);
-
-    while (!s.gameOver()) {
-        LOG("");
-        LOG("CHALLENGE #{}", c);
-        LOG("");
-        size_t r = 0;
-        while (!s.challenge.finished()) {
-            LOG("ROUND <{}>", r);
-            while (!s.challenge.round.finished()) {
-                const auto &p = s.current();
-                LOG("");
-                LOG("PLAYER {} TO MOVE", p.id);
-                p.hand.print();
-                Moves m(s);
-                m.print();
-
-                switch (s.current().id) {
-                    case 0: case 1: ragent.move(s); break;
-                //case 1: mcts.move(s); break;
-                case 2: flatmc.move(s); break;
-                case 3: naive.move(s); break;
-                }
-#ifndef NO_LOGGING
-                for (const auto &p : s.players) {
-                    LOG("Player {}", p.id);
-                    p.visible.print();
-                }
-#endif
-            }
-            s.challenge.round.reset();
-            if (s.gameOver()) {
-                break;
-            }
-            ++r;
-            LOG("");
-        }
-        //s.printScore();
-        s.reset();
-        ++c;
-    }
-    s.printScore();
-}
+std::vector<UICard> UICard::cards;
 
 int main() {
     chdir("/Users/tmarsh/Dropbox (Personal)/monkey");
@@ -69,9 +12,7 @@ int main() {
     spdlog::set_async_mode(q_size);
     spd::set_pattern("%H:%M:%S.%e%v");
 
-    SET_LOG_LEVEL(trace);
+    SET_LOG_LEVEL(info);
     Initialize();
-    //for (int i=0; i < 10; ++i) {
-        Play();
-    //}
+    GameUI::New()->play();
 }

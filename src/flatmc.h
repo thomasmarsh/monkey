@@ -117,9 +117,9 @@ struct MCAgent {
     }
 
     void dispatchSearch(const Moves &m, MoveStats &stats) {
-        ScopedLogLevel l(LogContext::Level::warn);
+        SCOPED_LOG(warn);
+
         size_t samples = mc_len * m.moves.size() / concurrency;
-        WARN("samples = {} ({} * {} / {})", samples, mc_len, m.moves.size(), concurrency);
         if (concurrency == 1) {
             search(m, stats, samples);
         } else {

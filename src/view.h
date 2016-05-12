@@ -10,8 +10,9 @@ struct ViewCard {
     ViewCard(CardRef i) : card(-1), rotation(0) { update(i); }
 
     void update(CardRef i) {
-        if (i != card) {
-            card = i;
+        auto id = Card::Get(i).prototype;
+        if (id != card) {
+            card = id;
             rotation = RandFloat() * 4 - 2;
         }
     }

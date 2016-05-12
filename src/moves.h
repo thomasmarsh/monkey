@@ -123,6 +123,7 @@ struct Moves {
 
     void maskedMoves(uint64_t mask, uint8_t i, const Card &card) {
         TRACE();
+        assert(i != 0xFF);
         if (!mask) { return; }
         for (uint8_t c : EachBit(mask)) {
             add({ card.action, card.id, i, c});
@@ -173,10 +174,12 @@ struct Moves {
         played_double_style = true;
 
         // Finally, iterate over all the cards in hand that accept double styles.
+        assert(i != 0xFF);
         for (uint8_t c : EachBit(mask)) {
             // For each other card in hand
             for (auto j : styles) {
                 assert(j > i);
+                assert(j != 0xFF);
                 add({{card.action, card.id, j, c},
                      {card.action, card.id, i, c}});
             }
@@ -218,7 +221,6 @@ struct Moves {
     void handMoves(uint8_t i, const Card &card) {
         TRACE();
         if (card.action == Action::PLAY_CHARACTER) {
-            ScopedLogLevel l(LogContext::Level::warn);
             charHandMoves(i, card);
         } else {
             allHandMoves(i, card);

@@ -5,16 +5,13 @@
 template <typename N, typename Ptr=typename N::Ptr>
 struct DotWriter {
     FILE *fp;
-    const State &state;
 
-    DotWriter(const State &s, Ptr root, size_t move_count)
-    : state(s)
-    {
+    DotWriter(Ptr root, size_t move_count) {
         root->sort();
 
         auto fname = fmt::format("ismcts/ismcts.{}", move_count);
 
-        FILE *fp = fopen(fname.c_str(), "w");
+        fp = fopen(fname.c_str(), "w");
         assert(fp);
 
         fprintf(fp, "digraph G {\n");
@@ -28,13 +25,20 @@ struct DotWriter {
         fclose(fp);
     }
 
+    std::string label(const Move &m) {
+        return fmt::format("{} {} {}",
+                           to_string(m.action()),
+                           m.card() != CardRef(-1) ?  to_string(Card::Get(m.card())) : "null",
+                           m.arg()  != Move::null  ?  std::to_string(m.arg()) : "null");
+    }
+
     void writeNodeDefs(Ptr node, int &n, int indent=1) {
         int m = n;
         fprintf(fp, "%*cn%d [\n", indent*2, ' ', m);
         fprintf(fp, "%*c  label = \"%s | %s\"\n",
-                indent*2, ' ', 
+                indent*2, ' ',
                 node->shortRepr().c_str(),
-                EscapeQuotes(to_string(node->move)).c_str());
+                EscapeQuotes(label(node->move)).c_str());
         fprintf(fp, "%*c  shape = record\n", indent*2, ' ');
         fprintf(fp, "%*c  style = filled\n", indent*2, ' ');
         std::string color;

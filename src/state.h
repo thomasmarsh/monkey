@@ -33,6 +33,10 @@ struct State {
         assert(events == rhs.events);
     }
 
+    static std::shared_ptr<State> New(const State &rhs) {
+        return std::make_shared<State>(rhs);
+    }
+
     void init() {
         TRACE();
         deck->populate();
@@ -284,7 +288,6 @@ struct State {
     }
 
     void logDraw(size_t i, CardRef c) {
-        TRACE();
         LOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
     }
 
@@ -409,21 +412,24 @@ struct State {
         current().hand.insert(c);
     }
 
+    Player &playerArg(uint8_t arg) { return players[arg >> 4]; }
+    uint8_t indexArg(uint8_t arg) { return arg & 0xF; }
+
     void knockoutChar(size_t i) {
         TRACE();
-        auto c = players[i >> 4].visible.removeCharacter(i & 0xF);
+        auto c = playerArg(i).visible.removeCharacter(indexArg(i));
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutStyle(size_t i) {
         TRACE();
-        auto c = players[i >> 4].visible.removeStyle(i & 0xF);
+        auto c = playerArg(i).visible.removeStyle(indexArg(i));
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutWeapon(size_t i) {
         TRACE();
-        auto c = players[i >> 4].visible.removeWeapon(i & 0xF);
+        auto c = playerArg(i).visible.removeWeapon(indexArg(i));
         deck->discardCard(Card::Get(c));
     }
 

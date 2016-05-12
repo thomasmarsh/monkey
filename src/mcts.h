@@ -20,19 +20,22 @@ static std::string to_string(MCTSRand p) {
     }
 };
 
-inline bool ContextEquals(const Move &a, const Move &b) {
-    return a.first.action  == b.first.action  &&
-           a.first.card    == b.first.card    &&
-           a.first.arg     == b.first.arg     &&
-           a.second.action == b.second.action &&
-           a.second.arg    == b.second.arg    &&
-           a.second.card   == b.second.card;
-}
+struct MoveListContains {
+    bool operator()(const std::vector<Move> &moves, const Move &query) const {
+        for (const auto &m : moves) {
+            if (m.cardEquals(query)) {
+                return true;
+            } else {
+            }
+        }
+        return false;
+    }
+};
 
 struct MCTSAgent {
-    using MoveList = Node<Move, State>::MoveList;
+    using NodeT = Node<Move, State, MoveListContains>;
+    using MoveList = NodeT::MoveList;
     using StatePtr = std::shared_ptr<State>;
-    using NodeT = Node<Move, State>;
 
     size_t itermax;
     size_t num_trees;
@@ -57,15 +60,32 @@ struct MCTSAgent {
                            exploration);
     }
 
-    void makeMove(const Move &move, StatePtr &state) {
+    void validate(const Move::Step &step) {
+        if (step.card != CardRef(-1)) {
+            auto card = Card::Get(step.card);
+            if (card.type == STYLE) {
+                assert(step.index != Move::null);
+            }
+        }
+    }
+
+    void validate(const Move &move) {
+        validate(move.first);
+        validate(move.second);
+    }
+
+    void perform(const Move &move, StatePtr &state) {
         ForwardState(*state);
+        validate(move);
         state->perform(move);
         ForwardState(*state);
     }
 
     void loop(NodeT::Ptr root, const State &root_state) {
+        SCOPED_LOG(warn);
+        ScopedLogLevel l(LogContext::Level::warn);
 
-        auto initial = std::make_shared<State>(root_state);
+        auto initial = State::New(root_state);
         initial->randomizeHiddenState();
 
         for (int i=0; i < itermax; ++i) {
@@ -81,13 +101,12 @@ struct MCTSAgent {
     }
 
     std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) {
-        ScopedLogLevel lock(LogContext::Level::warn);
 
         std::vector<NodeT::Ptr> root_nodes(num_trees);
         std::vector<std::thread> t(num_trees);
 
         for (size_t i=0; i < num_trees; ++i) {
-            root_nodes[i] = Node<Move, State>::New(Move::Null(), Cards{0}, nullptr, -1);
+            root_nodes[i] = NodeT::New(Move::Null(), Cards{0}, nullptr, -1);
             t[i] = std::thread([this, root_state, root=root_nodes[i]] {
                 this->loop(root, root_state);
             });
@@ -116,6 +135,7 @@ struct MCTSAgent {
     }
 
     Move parallelSearch(const State &root_state) {
+        ScopedLogLevel l(LogContext::Level::warn);
         auto merge = iterateAndMerge(root_state);
 
         // This can happen at the last move; not entirely sure why.
@@ -125,12 +145,10 @@ struct MCTSAgent {
 
         auto best = Move::Null();
         unsigned long high = 0;
-        WARN("player {} children:", root_state.current().id);
         Sort(merge, [](const auto &a, const auto &b) {
             return a.second > b.second;
         });
         for (const auto &e : merge) {
-            WARN(" - {} {}", e.second, to_string(e.first));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;
@@ -143,8 +161,7 @@ struct MCTSAgent {
     }
 
     Move singleSearch(const State &root_state) {
-        ScopedLogLevel l(LogContext::Level::warn);
-        auto root = Node<Move, State>::New(Move::Null(), Cards{0}, nullptr, -1);
+        auto root = NodeT::New(Move::Null(), Cards{0}, nullptr, -1);
 
         loop(root, root_state);
 
@@ -171,22 +188,24 @@ struct MCTSAgent {
     // Randomize the hidden state.
     std::pair<StatePtr,StatePtr> determinize(const StatePtr &root_state, size_t i) {
         auto initial = root_state;
-        auto state = std::make_shared<State>(*root_state);
+        auto state = State::New(*root_state);
         if (policy == MCTSRand::ALWAYS || (policy == MCTSRand::ONCE && i == 0)) {
             state->randomizeHiddenState();
-            initial = std::make_shared<State>(*state);
+            initial = State::New(*state);
         }
         return {initial, state};
     }
 
     // TODO: generalize Moves to take move type argument, but need careful handling of `allocated`
     std::vector<Move> search(StatePtr state, NodeT::Ptr node) {
+        ScopedLogLevel l(LogContext::Level::warn);
         Moves m(*state);
         return m.moves;
     }
 
     std::pair<StatePtr, NodeT::Ptr> select(StatePtr state, NodeT::Ptr node) {
         auto moves = search(state, node);
+        DLOG("moves.size() = {}", moves.size());
 
         auto untried = node->getUntriedMoves(moves);
 
@@ -195,7 +214,7 @@ struct MCTSAgent {
                 return expand(state, node, untried);
             }
             node = node->selectChildUCB(state, moves, exploration);
-            makeMove(node->move, state);
+            perform(node->move, state);
 
             moves = search(state, node);
             untried = node->getUntriedMoves(moves);
@@ -204,14 +223,11 @@ struct MCTSAgent {
     }
 
     // Create a new node to explore.
-    std::pair<StatePtr, NodeT::Ptr> expand(StatePtr state,
-                                           NodeT::Ptr node,
-                                        MoveList &untried)
-    {
+    std::pair<StatePtr, NodeT::Ptr> expand(StatePtr state, NodeT::Ptr node, MoveList &untried) {
         if (!untried.empty()) {
             auto m = untried[urand(untried.size())];
             auto &p = state->current();
-            makeMove(m, state);
+            perform(m, state);
             node = node->addChild(m, {m.card()}, p.id);
         }
         return {state, node};
@@ -240,11 +256,11 @@ struct MCTSAgent {
     }
 
     void log(NodeT::Ptr root, const State &state) {
-        ScopedLogLevel l(LogContext::Level::debug);
-        WARN("exploration tree:");
+        DLOG("exploration tree:");
         root->printTree();
-        WARN("player {} children:", state.current().id);
+        LOG("player {} children:", state.current().id);
+        root->sort();
         root->printChildren();
-        DotWriter<Node<Move, State>>(state, root, move_count);
+        DotWriter<NodeT>(root, move_count);
     }
 };

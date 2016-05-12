@@ -30,6 +30,12 @@ struct Move {
                    arg    == rhs.arg;
         }
 
+        bool cardEquals(const Step &rhs) const {
+            return action == rhs.action &&
+                   card   == rhs.card   &&
+                   arg    == rhs.arg;
+        }
+
         bool isBasic(Action a) const {
             return action == a && index == null;
         }
@@ -59,6 +65,9 @@ struct Move {
         return first == rhs.first && second == rhs.second;
     }
 
+    bool cardEquals(const Move &rhs) const {
+        return first.cardEquals(rhs.first) && second.cardEquals(rhs.second);
+    }
 } __attribute__ ((__packed__));
 
 inline std::string to_string(const Move::Step &s) {

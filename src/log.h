@@ -73,9 +73,7 @@ struct LogContext {
     int trace_indent;
     std::stack<Level> levels;
 
-    LogContext() : trace_indent(0)
-    {
-    }
+    LogContext() : trace_indent(0) {}
 
     std::string getIndent() {
         Lock lock(mtx);
@@ -118,6 +116,8 @@ struct ScopedLogLevel {
         gLogContext.pop();
     }
 };
+
+#define SCOPED_LOG(level) ScopedLogLevel __scoped_log(LogContext::Level level)
 
 struct Tracer {
     const char *f;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "view.h"
+#include "game.h"
 
 #include <SFML/Graphics.hpp>
 
@@ -53,25 +54,25 @@ struct UICard {
 
     static void RenderCards(const sf::Font &font) {
         cards.clear();
+        std::set<CardRef> seen;
         for (CardRef i=0; i < NUM_CARDS; ++i) {
-            cards.emplace_back(UICard(Card::Get(i), font));
+            auto card = Card::Get(i);
+            if (!Contains(seen, card.prototype)) {
+                cards.emplace_back(UICard(card, font));
+                seen.insert(seen.begin(), card.prototype);
+            }
         }
     }
 };
 
-std::vector<UICard> UICard::cards;
-
 // ---------------------------------------------------------------------------
 
-struct MonkeyChallenge : public std::enable_shared_from_this<MonkeyChallenge> {
-    using Ptr = std::shared_ptr<MonkeyChallenge>;
-
-    ViewState view_state;
-    State state;
-    size_t round_num;
-    std::thread t;
+struct GameUI : public std::enable_shared_from_this<GameUI> {
+    using Ptr = std::shared_ptr<GameUI>;
 
     std::mutex mtx;
+    ViewState view_state;
+    Game game;
     State clone;
 
     sf::RenderWindow window;
@@ -79,66 +80,65 @@ struct MonkeyChallenge : public std::enable_shared_from_this<MonkeyChallenge> {
     sf::Texture felt_tx;
     sf::Sprite felt_sprite;
 
-    explicit MonkeyChallenge(size_t players)
-    : state(players)
+    explicit GameUI(uint8_t players)
+    : game(players)
     , clone(players)
-#ifdef DISPLAY_UI
     , window(sf::VideoMode(2048, 1536), "Monkey", sf::Style::Default)
-#endif
     {
         TRACE();
-#ifdef DISPLAY_UI
+
         window.setVerticalSyncEnabled(true);
 
+        LOG("Load font");
         if (!font.loadFromFile("resources/ShrimpFriedRiceNo1.ttf")) {
             ERROR("could not load font");
         }
+        LOG("Render cards");
         UICard::RenderCards(font);
+
+        LOG("Load background");
         felt_tx.loadFromFile("resources/felt.jpg");
         felt_sprite.setTexture(felt_tx);
         felt_sprite.setScale(2048 / felt_sprite.getLocalBounds().width,
                              1536 / felt_sprite.getLocalBounds().height);
-#endif
+    }
 
-        state.init();
+    static Ptr New(uint8_t num_players=4) {
+        return std::make_shared<GameUI>(num_players);
     }
 
 
     void doClone() {
+        TRACE();
+
         std::lock_guard<std::mutex> lock(mtx);
-        clone = state;
+        clone = game.state;
     }
 
 
     Ptr Self() {
-        return MonkeyChallenge::shared_from_this();
+        TRACE();
+
+        return shared_from_this();
+    }
+
+    void launchGame() {
+        TRACE();
+
+        auto self = Self();
+        auto thread = std::thread([self] {
+            self->game.play([self] {
+                self->doClone();
+            });
+        });
+        thread.detach();
     }
 
     void play() {
         TRACE();
 
-        auto self = Self();
-        t = std::thread([self] {
-            auto f = [self] { self->doClone(); };
-            self->state.reset();
-            // TODO:
-#if 0
-            self->state.playGame(f);
-            self->state.deck->print_size();
-            self->state.deck->shuffle();
-            self->state.deck->print_size();
-#endif
-        });
-#ifdef DISPLAY_UI
-        t.detach();
-#else
-        t.join();
-#endif
-    }
-
-    void loop() {
-#ifdef DISPLAY_UI
         doClone();
+        launchGame();
         while (window.isOpen()) {
             auto event = sf::Event();
             while (window.pollEvent(event)) {
@@ -157,10 +157,11 @@ struct MonkeyChallenge : public std::enable_shared_from_this<MonkeyChallenge> {
             }
             window.display();
         }
-#endif
     }
 
     void renderCard(int x, int y, const ViewCard &c) {
+        TRACE();
+
         auto proto = Card::Get(c.card).prototype;
         sf::Sprite sprite;
         assert(proto < UICard::cards.size());
@@ -186,6 +187,8 @@ struct MonkeyChallenge : public std::enable_shared_from_this<MonkeyChallenge> {
     static constexpr size_t char_y_offset   = stack_y_offset * 4 + UICard::height;
 
     void renderCharacter(int x, int y, const ViewCharacter &vc) {
+        TRACE();
+
         renderCard(x, y, vc.character);
 
         int sx = x - stack_x_offset;
@@ -218,7 +221,7 @@ struct MonkeyChallenge : public std::enable_shared_from_this<MonkeyChallenge> {
     void renderPlayers() {
         int y = initial_y;
         size_t i = 0;
-        for (const auto &p : state.players) {
+        for (const auto &p : clone.players) {
 
             int x = initial_x;
 

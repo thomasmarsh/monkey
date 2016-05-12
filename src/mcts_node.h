@@ -4,8 +4,8 @@
 
 // TODO: generalize Node to Node<S, M>
 
-template <typename M, typename S>
-struct Node : std::enable_shared_from_this<Node<M,S>> {
+template <typename M, typename S, typename Contains>
+struct Node : std::enable_shared_from_this<Node<M,S,Contains>> {
     using Ptr = std::shared_ptr<Node>;
     using wPtr = std::weak_ptr<Node>;
 
@@ -36,6 +36,20 @@ struct Node : std::enable_shared_from_this<Node<M,S>> {
         return std::make_shared<Node>(m, c, parent, p);
     }
 
+    void validate(const Move::Step &step) {
+        if (step.card != CardRef(-1)) {
+            auto card = Card::Get(step.card);
+            if (card.type == STYLE) {
+                assert(step.index != Move::null);
+            }
+        }
+    }
+
+    void validate(const Move &move) {
+        validate(move.first);
+        validate(move.second);
+    }
+
     void reset(const M &m, const Cards &c, const Ptr &_parent, int p) {
         TRACE();
         move   = m;
@@ -58,16 +72,19 @@ struct Node : std::enable_shared_from_this<Node<M,S>> {
 
         // Find all moves for which this node *does* have children.
         MoveList tried;
+        DLOG("children.size() = ", children.size());
         for (const auto &c : children) {
-            if (c->move.isNull()) {
-                tried.push_back(c->move);
+            if (!c->move.isNull()) {
+                validate(c->move);
+                tried.emplace_back(c->move);
             }
         }
 
         MoveList untried;
         for (const auto m : legal_moves) {
-            if (!Contains(tried, m)) {
-                untried.push_back(m);
+            if (!Contains()(tried, m)) {
+                validate(m);
+                untried.emplace_back(m);
             }
         }
         return untried;
@@ -90,7 +107,8 @@ struct Node : std::enable_shared_from_this<Node<M,S>> {
         // Filter the list of children by the list of legal moves.
         std::vector<Ptr> legal_children;
         for (const auto &child : children) {
-            if (Contains(legal_moves, child->move)) {
+            if (Contains()(legal_moves, child->move)) {
+                validate(child->move);
                 legal_children.push_back(child);
             }
         }
@@ -141,12 +159,12 @@ struct Node : std::enable_shared_from_this<Node<M,S>> {
 
     void printChildren() const {
         for (const auto &n : children) {
-            WARN(" - {}", n->repr(to_string(move)));
+            LOG(" - {}", n->repr(to_string(n->move)));
         }
     }
 
     void printTree(size_t indent=0) const {
-        WARN("{}", indentStr(indent) + repr(to_string(move)));
+        DLOG("{}", indentStr(indent) + repr(to_string(move)));
 
         for (const auto &c : children) {
             c->printTree(indent+1);

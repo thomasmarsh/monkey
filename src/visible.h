@@ -144,12 +144,6 @@ struct PlayerVisible {
     void placeCharacter(const Card &card) {
         characters.emplace_back(Character {card.id});
 
-        if (card.id == 0x57) {
-            int x = 0;
-            x += 1;
-            LOG("x = {}", x);
-        }
-
         auto i = num_characters;
         ++num_characters;
 
@@ -183,6 +177,7 @@ struct PlayerVisible {
     }
 
     void placeWeapon(const Card &card, size_t i) {
+        LOG("placeWeapon: {}", i);
         assert(i < characters.size());
         characters[i].weapons.push_back(card.id);
         exposeWeapon(i);
