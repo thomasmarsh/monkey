@@ -35,8 +35,8 @@ void Play() {
                 m.print();
 
                 switch (s.current().id) {
-                case 0: ragent.move(s); break;
-                case 1: mcts.move(s); break;
+                    case 0: case 1: ragent.move(s); break;
+                //case 1: mcts.move(s); break;
                 case 2: flatmc.move(s); break;
                 case 3: naive.move(s); break;
                 }
@@ -69,7 +69,7 @@ int main() {
     spdlog::set_async_mode(q_size);
     spd::set_pattern("%H:%M:%S.%e%v");
 
-    SET_LOG_LEVEL(info);
+    SET_LOG_LEVEL(trace);
     Initialize();
     //for (int i=0; i < 10; ++i) {
         Play();

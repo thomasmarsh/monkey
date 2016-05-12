@@ -65,7 +65,7 @@ TEST_CASE("play a game", "[state]") {
                 REQUIRE(!m.moves.empty());
                 const auto &p = s.current();
                 for (const auto &move : m.moves) {
-                    LOG("    - {}", to_string(move, p));
+                    LOG("    - {}", to_string(move));
                 }
                 auto &move = m.moves[urand(m.moves.size())];
                 s.perform(move);

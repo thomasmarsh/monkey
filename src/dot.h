@@ -34,7 +34,7 @@ struct DotWriter {
         fprintf(fp, "%*c  label = \"%s | %s\"\n",
                 indent*2, ' ', 
                 node->shortRepr().c_str(),
-                EscapeQuotes(to_string(node->move.move, state.players[node->just_moved])).c_str());
+                EscapeQuotes(to_string(node->move)).c_str());
         fprintf(fp, "%*c  shape = record\n", indent*2, ' ');
         fprintf(fp, "%*c  style = filled\n", indent*2, ' ');
         std::string color;

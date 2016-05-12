@@ -4,8 +4,8 @@
 
 // TODO: generalize Node to Node<S, M>
 
-template <typename M>
-struct Node : std::enable_shared_from_this<Node<M>> {
+template <typename M, typename S>
+struct Node : std::enable_shared_from_this<Node<M,S>> {
     using Ptr = std::shared_ptr<Node>;
     using wPtr = std::weak_ptr<Node>;
 
@@ -83,7 +83,7 @@ struct Node : std::enable_shared_from_this<Node<M>> {
 
     // Use the UCB1 formula to select a child node, filtered by the given list
     // of legal moves.
-    Ptr selectChildUCB(std::shared_ptr<State> &state,
+    Ptr selectChildUCB(std::shared_ptr<S> &state,
                        const MoveList &legal_moves,
                        float exploration) {
         TRACE();
@@ -122,7 +122,7 @@ struct Node : std::enable_shared_from_this<Node<M>> {
 
     // Update this node - increment the visit count by one and increase the
     // win count by the result of the terminalState for just_moved
-    void update(const std::shared_ptr<State> &terminal) {
+    void update(const std::shared_ptr<S> &terminal) {
         TRACE();
         visits += 1;
         if (just_moved != -1) {
@@ -141,12 +141,12 @@ struct Node : std::enable_shared_from_this<Node<M>> {
 
     void printChildren() const {
         for (const auto &n : children) {
-            WARN(" - {}", n->repr(move.str()));
+            WARN(" - {}", n->repr(to_string(move)));
         }
     }
 
     void printTree(size_t indent=0) const {
-        WARN("{}", (indentStr(indent) + repr(move.str())));
+        WARN("{}", indentStr(indent) + repr(to_string(move)));
 
         for (const auto &c : children) {
             c->printTree(indent+1);

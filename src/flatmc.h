@@ -166,7 +166,7 @@ struct MCAgent {
         MoveStat stat;
         for (const auto &entry : sortStats(stats)) {
             std::tie(index, stat) = entry;
-            LOG("    {:3.2f} {}", stat.average(), to_string(m.moves[index], m.state.current()));
+            LOG("    {:3.2f} {}", stat.average(), to_string(m.moves[index]));
         }
     }
 

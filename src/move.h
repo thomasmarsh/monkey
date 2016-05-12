@@ -1,6 +1,7 @@
 #pragma once 
 
 #include "core.h"
+#include "cards.h"
 
 #include <memory>
 
@@ -9,30 +10,40 @@ struct Move {
 
     struct Step {
         Action   action;
+        CardRef  card;
         uint8_t  index;
         uint8_t  arg;
 
-        Step(Action a=Action::NONE, uint8_t i=null, uint8_t g=null)
-        : action(a), index(i), arg(g) {}
+        Step(Action  a = Action::NONE,
+             CardRef c = -1,
+             uint8_t i = null,
+             uint8_t g = null)
+        : action(a)
+        , card(c)
+        , index(i)
+        , arg(g)
+        {}
 
         bool operator==(const Step &rhs) const {
             return action == rhs.action &&
-                   index  == rhs.index   &&
+                   index  == rhs.index  &&
                    arg    == rhs.arg;
         }
 
-        bool isCore(Action a) const {
+        bool isBasic(Action a) const {
             return action == a && index == null;
         }
-        bool isNull() const { return isCore(Action::NONE); }
-        bool isConcede() const { return isCore(Action::CONCEDE); }
-        bool isPass() const { return isCore(Action::PASS); }
+
+        bool isNull()    const { return isBasic(Action::NONE); }
+        bool isConcede() const { return isBasic(Action::CONCEDE); }
+        bool isPass()    const { return isBasic(Action::PASS); }
     };
 
     Step first;
     Step second;
 
     Action  action() const { return first.action; }
+    CardRef card()   const { return first.card; }
     uint8_t index()  const { return first.index; }
     uint8_t arg()    const { return first.arg; }
 
@@ -51,8 +62,11 @@ struct Move {
 } __attribute__ ((__packed__));
 
 inline std::string to_string(const Move::Step &s) {
-    return fmt::format("{{ {} {{ {} }} {} }}",
+    return fmt::format("{{ {} {{ {} {} }} {} }}",
                        to_string(s.action),
+                       s.card == CardRef(-1)
+                           ? std::string("null")
+                           : to_string(Card::Get(s.card)),
                        s.index == Move::null
                            ? std::string("null")
                            : std::to_string(s.index),
