@@ -6,8 +6,8 @@
 
 //#define NO_LOGGING
 
-#define NO_DEBUG
-#define NO_TRACE
+//#define NO_DEBUG
+//#define NO_TRACE
 
 namespace spd = spdlog;
 
@@ -20,6 +20,8 @@ inline std::string LogBasename(const std::string &path) {
         auto fmt = std::string("|{:>12s}:{:04d}] ") + raw; \
         spd::get("console")->fn(fmt.c_str(), LogBasename(__FILE__), __LINE__, ##__VA_ARGS__); \
     } while (0)
+
+#define LOG_FLUSH() spd::get("console")->flush()
 
 #ifdef NO_LOGGING
 

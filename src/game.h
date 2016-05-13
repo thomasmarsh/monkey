@@ -1,9 +1,5 @@
 #pragma once
 
-#include "log.h"
-#include "moves.h"
-#include "cards.h"
-#include "util.h"
 #include "naive.h"
 #include "flatmc.h"
 #include "mcts.h"
@@ -22,13 +18,16 @@ struct Game {
     }
 
     void move() {
-        MCTSAgent(100).move(state);
-        //switch (state.current().id) {
-        //case 0: RandomAgent().move(state); break;
-        //case 1: MCTSAgent(100).move(state); break;
-        //case 2: MCAgent().move(state); break;
-        //case 3: NaiveAgent().move(state); break;
-        // }
+        switch (state.current().id) {
+        case 1:
+                LOG("<BEGIN>");
+                MCTSAgent(1000).move(state);
+                LOG("<END>");
+                break;
+        case 2: //MCAgent().move(state); break;
+        case 0: //RandomAgent().move(state); break;
+        case 3: NaiveAgent().move(state); break;
+        }
     }
 
     void printVisible() const {
@@ -54,6 +53,7 @@ struct Game {
             LOG("");
             LOG("CHALLENGE #{}", challenge_num);
             LOG("");
+            round_num = 1;
             while (!state.challenge.finished()) {
                 LOG("ROUND <{}>", round_num);
                 while (!state.challenge.round.finished()) {
@@ -69,6 +69,7 @@ struct Game {
                 ++round_num;
                 LOG("");
             }
+            LOG("avg moves / search: {}", (float) Moves::moves_count / (float) Moves::call_count);
             state.reset();
             ++challenge_num;
         }

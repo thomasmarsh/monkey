@@ -15,7 +15,7 @@ struct Move {
         uint8_t  arg;
 
         Step(Action  a = Action::NONE,
-             CardRef c = -1,
+             CardRef c = CardRef(-1),
              uint8_t i = null,
              uint8_t g = null)
         : action(a)

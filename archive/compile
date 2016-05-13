@@ -1,2 +1,4 @@
 set -x
-g++ -I/usr/local/include monkey.cc json11.cpp -o monkey -std=c++14 -Wall -O3 -L/usr/local/lib -ltcmalloc -lsfml-window -lsfml-system -lsfml-graphics
+FLAGS="-std=c++14 -Wall -O3 -DNDEBUG"
+SRCS="monkey.cc ../src/support/json11.cc"
+g++ -I/usr/local/include -I../src/support $SRCS -o monkey $FLAGS -L/usr/local/lib -ltcmalloc -lsfml-window -lsfml-system -lsfml-graphics

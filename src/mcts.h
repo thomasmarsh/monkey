@@ -82,7 +82,7 @@ struct MCTSAgent {
     }
 
     void loop(NodeT::Ptr root, const State &root_state) {
-        ScopedLogLevel l(LogContext::Level::warn);
+        //ScopedLogLevel l(LogContext::Level::warn);
 
         auto initial = State::New(root_state);
         initial->randomizeHiddenState();
@@ -96,6 +96,7 @@ struct MCTSAgent {
         assert(!root_state.gameOver());
         //auto m = parallelSearch(root_state);
         auto m = singleSearch(root_state);
+        LOG("<PERFORM>");
         root_state.perform(m);
     }
 
@@ -134,7 +135,7 @@ struct MCTSAgent {
     }
 
     Move parallelSearch(const State &root_state) {
-        ScopedLogLevel l(LogContext::Level::warn);
+        //ScopedLogLevel l(LogContext::Level::warn);
         auto merge = iterateAndMerge(root_state);
 
         // This can happen at the last move; not entirely sure why.
@@ -197,7 +198,7 @@ struct MCTSAgent {
 
     // TODO: generalize Moves to take move type argument, but need careful handling of `allocated`
     std::vector<Move> search(StatePtr state, NodeT::Ptr node) {
-        ScopedLogLevel l(LogContext::Level::warn);
+        //ScopedLogLevel l(LogContext::Level::warn);
         Moves m(*state);
         return m.moves;
     }

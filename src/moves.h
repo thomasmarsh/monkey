@@ -9,7 +9,12 @@
 #include <cassert>
 
 struct Moves {
-    std::vector<Move> moves;
+    using MoveSet = std::vector<Move>;
+
+    static size_t call_count;
+    static size_t moves_count;
+
+    MoveSet moves;
     const State &state;
     const Player &player;
     Player::Aggregate exposed;
@@ -22,6 +27,7 @@ struct Moves {
     , played_double_style(false)
     {
         TRACE();
+        ++call_count;
         if (find_moves) {
             moves.reserve(16);
             findMoves();
@@ -38,6 +44,7 @@ struct Moves {
     }
 
     void add(const Move&& move) {
+        ++moves_count;
         moves.emplace_back(move);
     }
 

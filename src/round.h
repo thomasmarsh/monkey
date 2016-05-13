@@ -27,6 +27,7 @@ struct Round {
     void resetUnchecked() {
         passed = 0;
         pending = all ^ conceded;
+        current = (current+1) % num_players;
         setCurrent();
     }
 
@@ -42,7 +43,6 @@ struct Round {
         conceded = 0;
         resetUnchecked();
         challenger = (challenger+1) % num_players;
-        current = challenger;
         setCurrent();
     }
 

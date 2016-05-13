@@ -511,7 +511,8 @@ struct State {
             assert(step.index < NUM_CARDS);
             auto c = current().hand.draw(step.index);
             const auto &card = Card::Get(c);
-            LOG("<player {}:play {}>", current().id, to_string(card));
+            LOG("<player {}:play {}>", current().id, to_string(step));
+            LOG_FLUSH();
             handleAction(step);
             playCard(step, card);
         } else {

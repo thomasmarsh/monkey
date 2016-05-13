@@ -71,14 +71,14 @@ struct GameUI : public std::enable_shared_from_this<GameUI> {
     using Ptr = std::shared_ptr<GameUI>;
 
     std::mutex mtx;
-    ViewState view_state;
-    Game game;
-    State clone;
+    ViewState  view_state;
+    Game       game;
+    State      clone;
 
     sf::RenderWindow window;
-    sf::Font font;
-    sf::Texture felt_tx;
-    sf::Sprite felt_sprite;
+    sf::Font         font;
+    sf::Texture      felt_tx;
+    sf::Sprite       felt_sprite;
 
     explicit GameUI(uint8_t players)
     : game(players)
