@@ -29,7 +29,7 @@ struct Card {
 #ifndef NO_DEBUG
     void debug() const {
         DLOG("Card:");
-        DLOG("    id             = {}", id);
+        DLOG("    id             = {:X}", id);
         DLOG("    prototype      = {}", prototype);
         DLOG("    quantity       = {}", quantity);
         DLOG("    type           = {}", to_string(type));

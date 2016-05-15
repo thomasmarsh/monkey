@@ -1,4 +1,4 @@
-#pragma once 
+#pragma once
 
 #include "bits.h"
 #include "cards.h"
@@ -177,7 +177,6 @@ struct PlayerVisible {
     }
 
     void placeWeapon(const Card &card, size_t i) {
-        LOG("placeWeapon: {}", i);
         assert(i < characters.size());
         characters[i].weapons.push_back(card.id);
         exposeWeapon(i);

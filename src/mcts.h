@@ -21,14 +21,13 @@ static std::string to_string(MCTSRand p) {
 };
 
 struct MoveListContains {
-    bool operator()(const std::vector<Move> &moves, const Move &query) const {
+    Move find(const std::vector<Move> &moves, const Move &query) const {
         for (const auto &m : moves) {
             if (m.cardEquals(query)) {
-                return true;
-            } else {
+                return m;
             }
         }
-        return false;
+        return Move::Null();
     }
 };
 
@@ -61,12 +60,14 @@ struct MCTSAgent {
     }
 
     void validate(const Move::Step &step) {
+#ifndef NDEBUG
         if (step.card != CardRef(-1)) {
             auto card = Card::Get(step.card);
             if (card.type == STYLE) {
                 assert(step.index != Move::null);
             }
         }
+#endif
     }
 
     void validate(const Move &move) {
@@ -75,14 +76,15 @@ struct MCTSAgent {
     }
 
     void perform(const Move &move, StatePtr &state) {
-        ForwardState(*state);
+        TRACE();
         validate(move);
         state->perform(move);
-        ForwardState(*state);
+        state->checkReset();
     }
 
     void loop(NodeT::Ptr root, const State &root_state) {
-        //ScopedLogLevel l(LogContext::Level::warn);
+        TRACE();
+        ScopedLogLevel l(LogContext::Level::warn);
 
         auto initial = State::New(root_state);
         initial->randomizeHiddenState();
@@ -93,14 +95,16 @@ struct MCTSAgent {
     }
 
     void move(State &root_state) {
+        TRACE();
         assert(!root_state.gameOver());
-        //auto m = parallelSearch(root_state);
-        auto m = singleSearch(root_state);
+        auto m = parallelSearch(root_state);
+        //auto m = singleSearch(root_state);
         LOG("<PERFORM>");
         root_state.perform(m);
     }
 
     std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) {
+        TRACE();
 
         std::vector<NodeT::Ptr> root_nodes(num_trees);
         std::vector<std::thread> t(num_trees);
@@ -135,7 +139,8 @@ struct MCTSAgent {
     }
 
     Move parallelSearch(const State &root_state) {
-        //ScopedLogLevel l(LogContext::Level::warn);
+        TRACE();
+        ScopedLogLevel l(LogContext::Level::warn);
         auto merge = iterateAndMerge(root_state);
 
         // This can happen at the last move; not entirely sure why.
@@ -161,6 +166,7 @@ struct MCTSAgent {
     }
 
     Move singleSearch(const State &root_state) {
+        TRACE();
         auto root = NodeT::New(Move::Null(), Cards{0}, nullptr, -1);
 
         loop(root, root_state);
@@ -198,7 +204,7 @@ struct MCTSAgent {
 
     // TODO: generalize Moves to take move type argument, but need careful handling of `allocated`
     std::vector<Move> search(StatePtr state, NodeT::Ptr node) {
-        //ScopedLogLevel l(LogContext::Level::warn);
+        ScopedLogLevel l(LogContext::Level::warn);
         Moves m(*state);
         return m.moves;
     }
@@ -245,7 +251,11 @@ struct MCTSAgent {
 
         // Simulate
         auto agent = NaiveAgent();
-        Rollout(*state, agent);
+        LOG("<ROLLOUT BEGIN>");
+        if (!state->gameOver()) {
+            Rollout(*state, agent);
+        }
+        LOG("<ROLLOUT END>");
 
         // Backpropagate
         while (node) {

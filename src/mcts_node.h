@@ -37,12 +37,14 @@ struct Node : std::enable_shared_from_this<Node<M,S,Contains>> {
     }
 
     void validate(const Move::Step &step) {
+#ifndef NDEBUG
         if (step.card != CardRef(-1)) {
             auto card = Card::Get(step.card);
             if (card.type == STYLE) {
                 assert(step.index != Move::null);
             }
         }
+#endif
     }
 
     void validate(const Move &move) {
@@ -72,7 +74,7 @@ struct Node : std::enable_shared_from_this<Node<M,S,Contains>> {
 
         // Find all moves for which this node *does* have children.
         MoveList tried;
-        DLOG("children.size() = ", children.size());
+        DLOG("children.size() = {}", children.size());
         for (const auto &c : children) {
             if (!c->move.isNull()) {
                 validate(c->move);
@@ -82,8 +84,9 @@ struct Node : std::enable_shared_from_this<Node<M,S,Contains>> {
 
         MoveList untried;
         for (const auto m : legal_moves) {
-            if (!Contains()(tried, m)) {
+            if (Contains().find(tried, m).isNull()) {
                 validate(m);
+                TLOG("add untried: {}", to_string(m));
                 untried.emplace_back(m);
             }
         }
@@ -107,7 +110,11 @@ struct Node : std::enable_shared_from_this<Node<M,S,Contains>> {
         // Filter the list of children by the list of legal moves.
         std::vector<Ptr> legal_children;
         for (const auto &child : children) {
-            if (Contains()(legal_moves, child->move)) {
+            auto move = Contains().find(legal_moves, child->move);
+            if (!move.isNull()) {
+                // Update child move with legal context
+                child->move = move;
+
                 validate(child->move);
                 legal_children.push_back(child);
             }

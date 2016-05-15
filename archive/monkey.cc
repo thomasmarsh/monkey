@@ -20,8 +20,8 @@
 using namespace std;
 using namespace json11;
 
-//#define LOGGING
-//#define DISPLAY_UI
+#define LOGGING
+#define DISPLAY_UI
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-variable"
@@ -4048,7 +4048,7 @@ vector<Player::Ptr> BuildPlayers() {
     TRACE();
     vector<Player::Ptr> players;
     //players.emplace_back(make_shared<RandomPlayer>());
-#if 0
+#if 1
     //players.emplace_back(make_shared<ISMCTSPlayer>(500, 10, 10, MCTSRand::NEVER));
     //players.emplace_back(make_shared<ISMCTSPlayer>(500, 10, 10, MCTSRand::ONCE));
     //players.emplace_back(make_shared<RandomPlayer>());

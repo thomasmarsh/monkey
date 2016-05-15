@@ -1,4 +1,3 @@
-#include "state.h"
 #include "moves.h"
 
 #include "support/catch.hpp"
@@ -74,7 +73,7 @@ TEST_CASE("play a game", "[state]") {
             s.validateCards();
             ++r;
         }
-        s.reset();
+        s.checkReset();
         ++c;
     }
 }

@@ -104,7 +104,6 @@ static Action ParseAction(const std::string &s) {
 	else if (s == "KNOCKOUT_STYLE")     { return Action::KNOCKOUT_STYLE; }
 	else if (s == "KNOCKOUT_WEAPON")    { return Action::KNOCKOUT_WEAPON; }
 	else if (s == "PLAY_WEAPON_RETAIN") { return Action::PLAY_WEAPON_RETAIN; }
-	else if (s == "PLAY_DOUBLESTYLE")   { return Action::PLAY_DOUBLESTYLE; }
 	else if (s == "CAPTURE_WEAPON")     { return Action::CAPTURE_WEAPON; }
 	else if (s == "PLAY_CHARACTER")     { return Action::PLAY_CHARACTER; }
     else if (s == "E_DRAW_TWO_SKILLS")  { return Action::E_DRAW_TWO_SKILLS; }

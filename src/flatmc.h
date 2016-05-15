@@ -42,9 +42,8 @@ struct MCAgent {
         auto p = clone.current().id;
 
         // Select a move and perform it
-        ForwardState(clone);
         auto i = RandomMove(m, clone);
-        ForwardState(clone);
+        clone.checkReset();
 
         // Randomly rollout the remainder
         auto agent = RandomAgent();

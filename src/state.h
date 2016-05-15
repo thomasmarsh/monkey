@@ -99,12 +99,22 @@ struct State {
         }
     }
 
-    void reset() {
+    bool roundFinished() { return challenge.round.finished(); }
+    bool challengeFinished() { return challenge.finished(); }
+
+    void resetRound() { challenge.round.reset(); }
+
+    // Idempotently check whether we need to reset something and possibly do so.
+    void checkReset() {
         if (!challenge.round.game_over) {
-            discardVisible();
-            challenge.reset();
-            deal();
-            drawEvent();
+            if (challengeFinished()) {
+                discardVisible();
+                challenge.reset();
+                deal();
+                drawEvent();
+            } else if (roundFinished()) {
+                resetRound();
+            }
         }
     }
 
@@ -460,7 +470,6 @@ struct State {
 
         case Action::DISARM_CHARACTER:
         case Action::PLAY_WEAPON_RETAIN:
-        case Action::PLAY_DOUBLESTYLE:
         case Action::CAPTURE_WEAPON:
         case Action::PLAY_CHARACTER:
             //WARN("unimplemented action: {}", to_string(step.action));
@@ -508,14 +517,29 @@ struct State {
         TRACE();
         assert(!step.isNull());
         if (step.index != Move::null) {
-            assert(step.index < NUM_CARDS);
-            auto c = current().hand.draw(step.index);
-            const auto &card = Card::Get(c);
-            LOG("<player {}:play {}>", current().id, to_string(step));
-            LOG_FLUSH();
+            auto &p = current();
+
+            LOG("<player {}:play {}>", p.id, to_string(step));
+            assert(step.index < p.hand.size());
+            assert(step.card < NUM_CARDS);
+
+            auto c = p.hand.draw(step.index);
+#if 0
+            if (step.card != c) {
+                auto &a = Card::Get(step.card);
+                auto &b = Card::Get(c);
+                LOG("STEP:");
+                a.debug();
+                LOG("HAND");
+                b.debug();
+            }
+#endif
+            assert(step.card == c);
+
+            playCard(step, Card::Get(step.card));
             handleAction(step);
-            playCard(step, card);
         } else {
+            assert(step.card == CardRef(-1));
             handleAction(step);
         }
     }

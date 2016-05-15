@@ -7,38 +7,26 @@
 
 inline size_t RandomMove(const Moves &m, State &s) {
     assert(!m.moves.empty());
-    size_t i = urand(m.moves.size());
-    auto move = m.moves[i];
+    const size_t i = urand(m.moves.size());
+    const auto &move = m.moves[i];
     if (move.isConcede()) {
-        move = Move::Pass();
+        s.perform(Move::Pass());
+    } else {
+        s.perform(move);
     }
-    s.perform(move);
     return i;
 }
-
-inline void ForwardState(State &s) {
-    // TODO: these shouldn't need to reach so deep
-    if (s.challenge.round.finished()) {
-        s.challenge.round.reset();
-    }
-    if (s.challenge.finished()) {
-        s.reset();
-    }
-}
-
 
 template <typename A>
 inline void Rollout(State &s, A &agent) {
     while (!s.gameOver()) {
-        ForwardState(s);
-
         if (s.gameOver()) {
+            WARN("rollout called on finished game");
             break;
         }
 
         agent.move(s);
-
-        ForwardState(s);
+        s.checkReset();
     }
 }
 
@@ -46,7 +34,7 @@ struct RandomAgent {
     std::string name() const { return "Random"; }
 
     void move(State &s) {
-        Moves m(s);
+        const Moves m(s);
         RandomMove(m, s);
     }
 };

@@ -6,8 +6,8 @@
 
 //#define NO_LOGGING
 
-//#define NO_DEBUG
-//#define NO_TRACE
+#define NO_DEBUG
+#define NO_TRACE
 
 namespace spd = spdlog;
 

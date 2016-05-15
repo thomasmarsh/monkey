@@ -39,7 +39,13 @@ struct NaiveAgent {
     }
 
     void move(State &s) {
-        Moves moves(s);
+        const Moves moves(s);
+
+        {
+            //ScopedLogLevel l(LogContext::Level::info);
+            //LOG("NAIVE:");
+            //moves.print();
+        }
 
         std::vector<int> values;
         values.reserve(moves.moves.size());
@@ -51,19 +57,18 @@ struct NaiveAgent {
             values.push_back(v);
         }
 
-        auto choice = urand(sum);
-        auto move = Move::Pass();
+        const auto choice = urand(sum);
 
         sum = 0;
-        int i = 0;
+        size_t i = 0;
         for (const auto &m : moves.moves) {
             sum += values[i];
             ++i;
             if (sum >= choice) {
-                move = m;
-                break;
+                s.perform(m);
+                return;
             }
         }
-        s.perform(move);
+        ERROR("unreached");
     }
 };

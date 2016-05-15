@@ -45,6 +45,10 @@ struct Moves {
 
     void add(const Move&& move) {
         ++moves_count;
+        TLOG("add: {}", to_string(move));
+        if (move.index() != Move::null) {
+            assert(player.hand.at(move.first.index) == move.first.card);
+        }
         moves.emplace_back(move);
     }
 
@@ -58,28 +62,8 @@ struct Moves {
         auto initial_count = moves.size();
 
         switch (card.arg_type) {
-        case ArgType::NONE:
-            if (card.type != CHARACTER) {
-                ERROR("expected CHARACTER, got {} {}",
-                      to_string(card.type),
-                      to_string(card));
-            }
-            break;
-        case ArgType::RECV_STYLE:
-            assert(card.type == STYLE);
-            if (!state.challenge.no_styles) {
-                // Consider taking out the XOR here to play both single and double moves on a
-                // character. See the related NOTE in maskedDoubleMoves.
-                maskedMoves(player.visible.recv_style ^ player.visible.double_style, i, card);
-                maskedDoubleMoves(player.visible.double_style, i, card);
-            }
-            break;
-        case ArgType::RECV_WEAPON:
-            assert(card.type == WEAPON);
-            if (!state.challenge.no_weapons) {
-                maskedMoves(player.visible.recv_weapon, i, card);
-            }
-            break;
+        case ArgType::RECV_STYLE:           styleMoves(i, card); break;
+        case ArgType::RECV_WEAPON:          weaponMoves(i, card); break;
         case ArgType::VISIBLE:              add(card.action); break;
         case ArgType::EXPOSED_CHAR:         maskedMoves(exposed.exposed_char, i, card); break;
         case ArgType::EXPOSED_STYLE:        maskedMoves(exposed.exposed_style, i, card); break;
@@ -89,6 +73,13 @@ struct Moves {
         case ArgType::OPPONENT_HAND:        opponentHandMoves(i, card); break;
         case ArgType::HAND:                 handMoves(i, card); break;
         case ArgType::DRAW_PILE:            drawPileMoves(i, card); break;
+        case ArgType::NONE:
+            if (card.type != CHARACTER) {
+                ERROR("expected CHARACTER, got {} {}",
+                      to_string(card.type),
+                      to_string(card));
+            }
+            break;
         }
 
         if (card.type == CHARACTER && (moves.size() - initial_count) == 0) {
@@ -128,6 +119,23 @@ struct Moves {
         return player.affinity == card.affinity;
     }
 
+    void styleMoves(uint8_t i, const Card &card) {
+        assert(card.type == STYLE);
+        if (!state.challenge.no_styles) {
+            // Consider taking out the XOR here to play both single and double moves on a
+            // character. See the related NOTE in maskedDoubleMoves.
+            maskedMoves(player.visible.recv_style ^ player.visible.double_style, i, card);
+            maskedDoubleMoves(player.visible.double_style, i, card);
+        }
+    }
+
+    void weaponMoves(uint8_t i, const Card &card) {
+        assert(card.type == WEAPON);
+        if (!state.challenge.no_weapons) {
+            maskedMoves(player.visible.recv_weapon, i, card);
+        }
+    }
+
     void maskedMoves(uint64_t mask, uint8_t i, const Card &card) {
         TRACE();
         assert(i != 0xFF);
@@ -161,6 +169,7 @@ struct Moves {
         TRACE();
 
         if (!mask) {
+            TLOG("no visible cards allow double moves");
             // No visible cards allow double moves.
             return;
         }
@@ -187,7 +196,8 @@ struct Moves {
             for (auto j : styles) {
                 assert(j > i);
                 assert(j != 0xFF);
-                add({{card.action, card.id, j, c},
+                auto card2 = Card::Get(player.hand.at(j));
+                add({{card2.action, card2.id, j, c},
                      {card.action, card.id, i, c}});
             }
         }
@@ -234,35 +244,31 @@ struct Moves {
         }
     }
 
-    void addDoubleChar(State &clone, uint8_t i, const Card &c1, uint8_t j, CardRef c) {
-        Moves m2(clone, j);
-        for (const auto &m : m2.moves) {
-            assert(m.second.isNull());
-            add({{Action::NONE, c1.id, i, Move::null}, m.first});
+    void addDoubleChar(State &clone, const Move::Step &first, uint8_t j) {
+        Moves m(clone, j);
+        for (const auto &move : m.moves) {
+            assert(move.second.isNull());
+            add({first, move.first});
         }
     }
 
     void charHandMoves(uint8_t i, const Card &card) {
         auto clone = state;
-        clone.processStep(Move::Step(Action::NONE, card.id, i));
-        for (uint8_t j=0; j < player.hand.characters.size(); ++j) {
-            auto c = player.hand.characters[j];
-            if (j < i) {
-                addDoubleChar(clone, i, card, j, c);
-            } else if (j > i) {
-                addDoubleChar(clone, i, card, j-1, c);
-            }
+        auto first = Move::Step(Action::NONE, card.id, i);
+        clone.processStep(first);
+        for (uint8_t j=0; j < clone.players[player.id].hand.characters.size(); ++j) {
+            addDoubleChar(clone, first, j);
         }
     }
 
     void allHandMoves(uint8_t i, const Card &card) {
         TRACE();
-        for (uint8_t c=0; c < player.hand.size(); ++c) {
+        for (uint8_t j=0; j < player.hand.size(); ++j) {
             // Need to be careful about the current card.
-            if (c < i) {
-                add({card.action, card.id, i, c});
-            } else if (c > i) {
-                add({card.action, card.id, i, uint8_t(c-1)});
+            if (j < i) {
+                add({card.action, card.id, i, j});
+            } else if (j > i) {
+                add({card.action, card.id, i, uint8_t(j-1)});
             }
         }
     }
@@ -296,6 +302,7 @@ struct Moves {
         TRACE();
         uint8_t i = 0;
         for (const auto c : player.hand.characters) {
+            TLOG("consider: {} {}", i, to_string(Card::Get(c)));
             findCardMoves(i, Card::Get(c));
             ++i;
         }
@@ -313,7 +320,9 @@ struct Moves {
     }
 
     void checkCard(uint8_t i, CardRef c) {
+        TRACE();
         const auto &card = Card::Get(c);
+        TLOG("consider: {} {}", i, to_string(card));
         if (canPlayCard(card)) {
             findCardMoves(i, card);
         }
@@ -337,6 +346,8 @@ struct Moves {
         TRACE();
         assert(moves.empty());
 
+
+
         if (firstMove()) {
             handleFirstMove();
             return;
@@ -348,7 +359,7 @@ struct Moves {
         add(Move::Concede());
     }
 
-    void print() {
+    void print() const {
         LOG("Moves:");
         for (auto &m : moves) {
             LOG("    {}", to_string(m));

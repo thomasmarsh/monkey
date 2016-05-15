@@ -47,7 +47,6 @@ enum class Action : uint8_t {
     KNOCKOUT_STYLE,         // OPPONENT_STYLE_CHAR      -
     KNOCKOUT_WEAPON,        // OPPONENT_WEAPON_CHAR     -
     PLAY_WEAPON_RETAIN,     // VISIBLE_CHAR_OR_HOLD     -
-    PLAY_DOUBLESTYLE,       // VISIBLE_CHAR             PLAY_STYLE
     CAPTURE_WEAPON,         // OPPONENT_WEAPON_CHAR     PLAY_WEAPON_RETAIN
 
     PLAY_CHARACTER,         // -                        -
@@ -153,7 +152,6 @@ inline std::string to_string(Action action) {
 	case Action::KNOCKOUT_STYLE:     return "KNOCKOUT_STYLE";
 	case Action::KNOCKOUT_WEAPON:    return "KNOCKOUT_WEAPON";
 	case Action::PLAY_WEAPON_RETAIN: return "PLAY_WEAPON_RETAIN";
-	case Action::PLAY_DOUBLESTYLE:   return "PLAY_DOUBLESTYLE";
 	case Action::CAPTURE_WEAPON:     return "CAPTURE_WEAPON";
 	case Action::PLAY_CHARACTER:     return "PLAY_CHARACTER";
     case Action::E_DRAW_TWO_SKILLS:  return "E_DRAW_TWO_SKILLS";
