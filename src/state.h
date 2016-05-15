@@ -125,10 +125,12 @@ struct State {
         size_t count = 0;
         size_t best = 0;
         int high = 0;
+        int points = 0;
         for (int i = 0; i < players.size(); ++i) {
             // Ignoring conceded players
             if (!challenge.round.conceded[i]) {
                 auto value = players[i].visible.played_value;
+                points += players[i].visible.played_points;
                 if (value > high) {
                     count = 0;
                     best = i;
@@ -141,7 +143,6 @@ struct State {
         if (count > 0) {
             LOG("tie - no points for anyone");
         } else {
-            auto points = players[best].visible.played_points;
             LOG("player {} is the winner with {} points", best, points);
             players[best].score += points;
         }

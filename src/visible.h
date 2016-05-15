@@ -123,10 +123,14 @@ struct PlayerVisible {
 
     void addValue(const Card &card) {
         if (invert_value) {
-            played_points += card.inverted_value;
+            if (card.type == CHARACTER) {
+                played_points += card.inverted_value;
+            }
             played_value  += card.inverted_value;
         } else {
-            played_points += card.face_value;
+            if (card.type == CHARACTER) {
+                played_points += card.face_value;
+            }
             played_value  += card.face_value;
         }
     }
@@ -134,10 +138,14 @@ struct PlayerVisible {
     void reduceValue(const Card &card) {
         if (invert_value) {
             played_value  -= card.inverted_value;
-            played_points -= card.inverted_value;
+            if (card.type == CHARACTER) {
+                played_points -= card.inverted_value;
+            }
         } else {
             played_value  -= card.face_value;
-            played_points -= card.face_value;
+            if (card.type == CHARACTER) {
+                played_points -= card.face_value;
+            }
         }
     }
 
@@ -174,12 +182,14 @@ struct PlayerVisible {
         assert(i < characters.size());
         characters[i].styles.push_back(card.id);
         exposeStyle(i);
+        addValue(card);
     }
 
     void placeWeapon(const Card &card, size_t i) {
         assert(i < characters.size());
         characters[i].weapons.push_back(card.id);
         exposeWeapon(i);
+        addValue(card);
     }
 
     void unexposeStyle(size_t i) {
@@ -224,6 +234,7 @@ struct PlayerVisible {
         if (characters[i].empty()) {
             exposeChar(i);
         }
+        reduceValue(Card::Get(card));
         return card;
     }
 
@@ -238,6 +249,7 @@ struct PlayerVisible {
         if (characters[i].empty()) {
             exposeChar(i);
         }
+        reduceValue(Card::Get(card));
         return card;
     }
 
