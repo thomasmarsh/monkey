@@ -49,8 +49,8 @@ struct EachBit {
     };
 
     Iterator begin()       { return Iterator(x); }
-    Iterator end()         { return Iterator(0); }
     Iterator begin() const { return Iterator(x); }
+    Iterator end()         { return Iterator(0); }
     Iterator end()   const { return Iterator(0); }
 };
 

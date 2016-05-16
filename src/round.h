@@ -35,6 +35,8 @@ struct Round {
         // TODO: assert instead of test
         if (!challengeFinished()) {
             resetUnchecked();
+        } else {
+            WARN("reset called on finished challenged");
         }
     }
 

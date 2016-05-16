@@ -21,7 +21,8 @@ struct MCAgent {
     };
 
     using MoveStats = std::map<size_t, MoveStat>;
-    mutable std::mutex mtx;
+
+    mutable std::mutex mutex;
 
     MCAgent(size_t l=MC_LEN)
     : mc_len(l)
@@ -68,7 +69,7 @@ struct MCAgent {
 
         // Associate win rate with this move
         {
-            std::lock_guard<std::mutex> lock(mtx);
+            std::lock_guard<std::mutex> lock(mutex);
             auto &st = stats[index];
             st.scores += s.players[p].score;
             ++st.visits;
@@ -85,7 +86,7 @@ struct MCAgent {
         for (auto p : stats) {
             std::tie(index, s) = p;
             
-            float avg = (float)s.scores/(float)s.visits;
+            float avg = float(s.scores) / float(s.visits);
 
             // Use >= so we skip over concede if it ties with something else
             if (avg >= high) {
@@ -158,6 +159,7 @@ struct MCAgent {
 
     SortedStats sortStats(const MoveStats &stats) const {
         SortedStats sorted;
+        sorted.reserve(stats.size());
 
         std::copy(stats.begin(), stats.end(), std::back_inserter(sorted));
 
@@ -169,6 +171,7 @@ struct MCAgent {
     }
 
     void logStats(const Moves &m, const MoveStats &stats) const {
+#ifndef NO_LOGGING
         LOG("Search results:");
 
         size_t index;
@@ -177,6 +180,6 @@ struct MCAgent {
             std::tie(index, stat) = entry;
             LOG("    {:3.2f} {}", stat.average(), to_string(m.moves[index]));
         }
+#endif
     }
-
 };

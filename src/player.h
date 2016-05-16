@@ -22,8 +22,8 @@ struct Player {
         score           = 0;
     }
 
-    void placeCharacter(const Card &card) { visible.placeCharacter(card); }
-    void placeStyle(const Card &card, size_t i) { visible.placeStyle(card, i); }
+    void placeCharacter(const Card &card)        { visible.placeCharacter(card); }
+    void placeStyle(const Card &card, size_t i)  { visible.placeStyle(card, i); }
     void placeWeapon(const Card &card, size_t i) { visible.placeWeapon(card, i); }
 
     size_t size() const {
@@ -49,6 +49,10 @@ struct Player {
         uint64_t exposed_weapon;
         uint64_t double_style;
 
+        ///  Constructor
+        ///
+        ///  @param ignore  player id to ignore
+        ///  @param players players vector
         Aggregate(size_t ignore, const std::vector<Player> &players)
         : exposed_char(0)
         , exposed_style(0)
