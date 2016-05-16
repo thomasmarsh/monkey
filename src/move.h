@@ -71,18 +71,19 @@ struct Move {
 } __attribute__ ((__packed__));
 
 inline std::string to_string(const Move::Step &s) {
-    return fmt::format("{{ {} {{ {} {} }} {} }}",
-                       to_string(s.action),
-                       s.card == CardRef(-1)
-                           ? std::string("null")
-                           : to_string(Card::Get(s.card)),
-                       s.index == Move::null
-                           ? std::string("null")
-                           : std::to_string(s.index),
-                       s.arg == Move::null
-                           ? std::string("null")
-                           : std::to_string(s.arg));
-};
+    auto cardStr   = s.card  == CardRef(-1) ? std::string() : to_string(Card::Get(s.card));
+    auto indexStr  = s.index == Move::null  ? std::string() : std::to_string(s.index);
+    auto argStr    = s.arg   == Move::null  ? std::string() : std::to_string(s.arg);
+
+    auto str = "{ " + to_string(s.action);
+    for (const auto &part : { cardStr, indexStr, argStr }) {
+        if (!part.empty()) {
+            str += " " + part;
+        }
+    }
+    str += " }";
+    return str;
+}
 
 inline std::string to_string(const Move &m) {
     if (m.second.isNull()) {

@@ -144,6 +144,7 @@ static std::string LoadCardsJson() {
 }
 
 static void ValidateCardJson(const Json &json) {
+#ifndef NDEBUG
     assert(json.is_object());
     std::string error;
     bool has_shape = json.has_shape({
@@ -164,6 +165,7 @@ static void ValidateCardJson(const Json &json) {
         WARN("has_shape error: {}", error);
     }
     assert(has_shape);
+#endif
 }
 
 static void SetInverseValue(Card &c) {

@@ -227,6 +227,8 @@ struct State {
         const auto i = current().id;
 
         // Copy all unseen cards (draw pile) from the main to the hidden deck.
+        hidden->draw.characters.reserve(deck->draw.characters.size() + players.size() * 4);
+        hidden->draw.skills.reserve(deck->draw.skills.size() + players.size() * 6);
         CopyCards(deck->draw.characters, hidden->draw.characters);
         CopyCards(deck->draw.skills,     hidden->draw.skills);
 
@@ -423,29 +425,43 @@ struct State {
         current().hand.insert(c);
     }
 
+    const Player &playerArg(uint8_t arg) const { return players[arg >> 4]; }
     Player &playerArg(uint8_t arg) { return players[arg >> 4]; }
-    uint8_t indexArg(uint8_t arg) { return arg & 0xF; }
+    uint8_t indexArg(uint8_t arg) const { return arg & 0xF; }
+
+    void logOpponentAction(uint8_t i, const std::string &label) const {
+        LOG("<player {}:{} player {} char {}>", current().id, label, playerArg(i).id, indexArg(i));
+    }
+
+    void disarm(uint8_t i) {
+        logOpponentAction(i, "disarm");
+        playerArg(i).visible.disarm(indexArg(i));
+    }
 
     void knockoutChar(size_t i) {
         TRACE();
         auto c = playerArg(i).visible.removeCharacter(indexArg(i));
+        logOpponentAction(i, "knockout");
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutStyle(size_t i) {
         TRACE();
         auto c = playerArg(i).visible.removeStyle(indexArg(i));
+        logOpponentAction(i, "knockout style");
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutWeapon(size_t i) {
         TRACE();
         auto c = playerArg(i).visible.removeWeapon(indexArg(i));
+        logOpponentAction(i, "knockout weapon");
         deck->discardCard(Card::Get(c));
     }
 
     void tradeHand(const Move::Step &step) {
         TRACE();
+        LOG("<player {} and {}:swap hand>", current().id, step.arg);
         std::swap(current().hand, players[step.arg].hand);
     }
 
@@ -469,11 +485,11 @@ struct State {
         case Action::TRADE_HAND:         tradeHand(step); break;
         case Action::CLEAR_FIELD:        discardVisible(); break;
 
-        case Action::DISARM_CHARACTER:
+        case Action::DISARM_CHARACTER:   disarm(step.arg); break;
         case Action::PLAY_WEAPON_RETAIN:
         case Action::CAPTURE_WEAPON:
         case Action::PLAY_CHARACTER:
-            //WARN("unimplemented action: {}", to_string(step.action));
+            WARN("unimplemented action: {}", to_string(step.action));
             break;
 
         case Action::E_DRAW_TWO_SKILLS:
@@ -537,7 +553,7 @@ struct State {
 #endif
             assert(step.card == c);
 
-            playCard(step, Card::Get(step.card));
+            playCard(step, Card::Get(c));
             handleAction(step);
         } else {
             assert(step.card == CardRef(-1));

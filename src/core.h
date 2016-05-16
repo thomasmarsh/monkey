@@ -165,7 +165,7 @@ inline std::string to_string(Action action) {
     }
 }
 
-static std::string to_string(ArgType a) {
+inline std::string to_string(ArgType a) {
     switch (a) {
     case ArgType::NONE:                 return "NONE";
     case ArgType::VISIBLE:              return "VISIBLE";

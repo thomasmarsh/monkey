@@ -41,12 +41,6 @@ struct NaiveAgent {
     void move(State &s) {
         const Moves moves(s);
 
-        {
-            //ScopedLogLevel l(LogContext::Level::info);
-            //LOG("NAIVE:");
-            //moves.print();
-        }
-
         std::vector<int> values;
         values.reserve(moves.moves.size());
 

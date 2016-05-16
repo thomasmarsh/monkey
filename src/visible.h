@@ -10,6 +10,7 @@ struct PlayerVisible {
         Cards   weapons;
         bool    immune;
         bool    two_weapons;
+        bool    disarmed;
 
         Character(CardRef c)
         : card(c)
@@ -92,6 +93,12 @@ struct PlayerVisible {
         exposed_style  = 0;
         exposed_weapon = 0;
         double_style   = 0;
+    }
+
+    void disarm(size_t i) {
+        characters[i].disarmed = true;
+        recv_weapon.clear(i);
+        recv_style.clear(i);
     }
 
     void dropColumn(size_t i) {
@@ -190,6 +197,17 @@ struct PlayerVisible {
         characters[i].weapons.push_back(card.id);
         exposeWeapon(i);
         addValue(card);
+        updateRecvWeapons(i);
+    }
+
+    void updateRecvWeapons(size_t i) {
+        auto &c = characters[i];
+        size_t allowed = c.two_weapons ? 2 : 1;
+        if (c.weapons.size() >= allowed) {
+            recv_weapon.clear(i);
+        } else {
+            recv_weapon.set(i);
+        }
     }
 
     void unexposeStyle(size_t i) {
@@ -249,6 +267,7 @@ struct PlayerVisible {
         if (characters[i].empty()) {
             exposeChar(i);
         }
+        updateRecvWeapons(i);
         reduceValue(Card::Get(card));
         return card;
     }
@@ -266,6 +285,7 @@ struct PlayerVisible {
     }
 
     void print() const {
+#ifndef NO_LOGGING
         if (!empty()) {
             for (const auto &c : characters) {
                 LOG("   - {}", to_string(Card::Get(c.card)));
@@ -278,5 +298,6 @@ struct PlayerVisible {
         } else {
             LOG("    <empty>");
         }
+#endif// NO_LOGGING
     }
 };

@@ -2,6 +2,7 @@
 
 #include "cards.h"
 #include "rand.h"
+#include "util.h"
 
 #include <memory>
 #include <set>
@@ -177,6 +178,7 @@ struct Deck {
     }
 
     void print() const {
+#ifndef NO_LOGGING
         auto print = [](const char* title, auto pile) {
             LOG("{} ({}):", title, pile.size());
             auto r = pile;
@@ -192,6 +194,7 @@ struct Deck {
         print("characters", draw.characters);
         print("skills", draw.skills);
         print_size();
+#endif
     }
 
     bool isConsistent() const {

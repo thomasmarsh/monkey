@@ -99,7 +99,6 @@ struct MCTSAgent {
         assert(!root_state.gameOver());
         auto m = parallelSearch(root_state);
         //auto m = singleSearch(root_state);
-        LOG("<PERFORM>");
         root_state.perform(m);
     }
 
@@ -111,7 +110,7 @@ struct MCTSAgent {
 
         for (size_t i=0; i < num_trees; ++i) {
             root_nodes[i] = NodeT::New(Move::Null(), Cards{0}, nullptr, -1);
-            t[i] = std::thread([this, root_state, root=root_nodes[i]] {
+            t[i] = std::thread([this, i, root_state, root=root_nodes[i]] {
                 this->loop(root, root_state);
             });
         }
@@ -153,14 +152,17 @@ struct MCTSAgent {
         Sort(merge, [](const auto &a, const auto &b) {
             return a.second > b.second;
         });
+
+        ScopedLogLevel l2(LogContext::Level::info);
+        LOG("Search results:");
         for (const auto &e : merge) {
+            LOG("    {} {}", e.second, to_string(e.first));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;
             }
         }
 
-        //LOG("best: {} {}", high, CARD_TABLE[Player::cardForMove(best)].repr().c_str());
         assert(!best.isNull());
         return best;
     }
@@ -170,7 +172,6 @@ struct MCTSAgent {
         auto root = NodeT::New(Move::Null(), Cards{0}, nullptr, -1);
 
         loop(root, root_state);
-
         log(root, root_state);
 
         // This can happen at the last move; not entirely sure why.
@@ -251,11 +252,9 @@ struct MCTSAgent {
 
         // Simulate
         auto agent = NaiveAgent();
-        LOG("<ROLLOUT BEGIN>");
         if (!state->gameOver()) {
             Rollout(*state, agent);
         }
-        LOG("<ROLLOUT END>");
 
         // Backpropagate
         while (node) {

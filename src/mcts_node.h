@@ -165,17 +165,21 @@ struct Node : std::enable_shared_from_this<Node<M,S,Contains>> {
     }
 
     void printChildren() const {
+#ifndef NO_LOGGING
         for (const auto &n : children) {
             LOG(" - {}", n->repr(to_string(n->move)));
         }
+#endif
     }
 
     void printTree(size_t indent=0) const {
+#ifndef NO_LOGGING
         DLOG("{}", indentStr(indent) + repr(to_string(move)));
 
         for (const auto &c : children) {
             c->printTree(indent+1);
         }
+#endif
     }
 
     std::string indentStr(size_t indent) const {

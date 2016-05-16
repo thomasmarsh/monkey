@@ -200,7 +200,7 @@
         "label": "Monk Warrior (Play Another Character)"
     },
     {
-        "action": "CAPTURE_WEAPON",
+        "action": "KNOCKOUT_WEAPON",
         "affinity": "MONK",
         "special": "NONE",
         "arg_type": "EXPOSED_WEAPON",

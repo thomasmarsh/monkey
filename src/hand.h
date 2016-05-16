@@ -62,6 +62,7 @@ struct PlayerHand {
 #endif
 
     void print() const {
+#ifndef NO_LOGGING
         LOG("Hand:");
         LOG("    CHARACTERS");
         for (auto c : characters) {
@@ -71,5 +72,6 @@ struct PlayerHand {
         for (auto c : skills) {
             LOG("    {}", to_string(Card::Get(c)));
         }
+#endif
     }
 };

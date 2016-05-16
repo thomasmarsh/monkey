@@ -45,10 +45,12 @@ struct Moves {
 
     void add(const Move&& move) {
         ++moves_count;
+#ifndef NDEBUG
         TLOG("add: {}", to_string(move));
         if (move.index() != Move::null) {
             assert(player.hand.at(move.first.index) == move.first.card);
         }
+#endif
         moves.emplace_back(move);
     }
 
@@ -205,9 +207,9 @@ struct Moves {
 
     void visibleOrHoldMoves(uint8_t i, const Card &card) {
         TRACE();
-        uint8_t x = 0;
         auto n = player.visible.num_characters;
         assert(n == player.visible.characters.size());
+        uint8_t x = 0;
         for (; x < n; ++x) {
             add({card.action, card.id, i, x});
         }
@@ -346,8 +348,6 @@ struct Moves {
         TRACE();
         assert(moves.empty());
 
-
-
         if (firstMove()) {
             handleFirstMove();
             return;
@@ -360,9 +360,11 @@ struct Moves {
     }
 
     void print() const {
+#ifndef NO_LOGGING
         LOG("Moves:");
         for (auto &m : moves) {
             LOG("    {}", to_string(m));
         }
+#endif
     }
 };

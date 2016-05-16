@@ -16,16 +16,6 @@ struct ARC4RNG {
 extern ARC4RNG Arc4RNG;
 
 template <typename T>
-inline void Sort(T &v) {
-    std::sort(std::begin(v), std::end(v));
-}
-
-template <typename T, typename F>
-inline void Sort(T &v, F f) {
-    std::sort(std::begin(v), std::end(v), f);
-}
-
-template <typename T>
 inline void Shuffle(T &v) {
     std::shuffle(std::begin(v), std::end(v), Arc4RNG);
 }
