@@ -5,7 +5,7 @@ set(CMAKE_BUILD_TYPE RELEASE)
 set(CMAKE_CXX_FLAGS "-pipe -Wall -Werror -std=c++14 -march=native -fcolor-diagnostics")
 
 # Passing -DNDEBUG gets about a 4-5% increase
-set(CMAKE_CXX_FLAGS_RELEASE "-Ofast") #-DNDEBUG")
+set(CMAKE_CXX_FLAGS_RELEASE "-Ofast -DNDEBUG")
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -g")
 
 include_directories(

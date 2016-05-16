@@ -129,7 +129,7 @@ struct State {
         for (int i = 0; i < players.size(); ++i) {
             // Ignoring conceded players
             if (!challenge.round.conceded[i]) {
-                auto value = players[i].visible.played_value;
+                const auto value = players[i].visible.played_value;
                 points += players[i].visible.played_points;
                 if (value > high) {
                     count = 0;
@@ -211,7 +211,7 @@ struct State {
                 logDraw(p.id, p.hand.characters[i]);
             }
 
-            auto ns = p.hand.skills.size();
+            const auto ns = p.hand.skills.size();
             deck->dealSkills(TARGET_S-std::min(TARGET_S, ns), p.hand.skills);
             for (auto i=ns; i < p.hand.skills.size(); ++i) {
                 logDraw(p.id, p.hand.skills[i]);
@@ -251,8 +251,8 @@ struct State {
             if (p.id != i) {
                 auto &hand = p.hand;
                 // Remember the size of the hand.
-                auto nc = hand.characters.size();
-                auto nr = hand.skills.size();
+                const auto nc = hand.characters.size();
+                const auto nr = hand.skills.size();
 
                 // Now it is safe to clear the hand and redistribute.
                 hand.reset();
@@ -276,7 +276,7 @@ struct State {
 
     void drawEvent() {
         TRACE();
-        auto c = deck->drawEvent();
+        const auto c = deck->drawEvent();
         events.push_back(c);
         const auto &card = Card::Get(c);
         LOG("<event:{}>", to_string(card));
@@ -332,7 +332,7 @@ struct State {
         TRACE();
         for (auto &p : players) {
             for (int j=0; j < 2; ++j) {
-                auto c = deck->drawSkill();
+                const auto c = deck->drawSkill();
                 logDraw(p.id, c);
                 p.hand.insert(c);
             }
@@ -342,7 +342,7 @@ struct State {
     void playersRandomSteal() {
         TRACE();
         // The chosen card from each player's hand.
-        auto np = players.size();
+        const auto np = players.size();
         std::vector<CardRef> stolen;
         stolen.reserve(np);
 
@@ -394,7 +394,7 @@ struct State {
         TRACE();
         auto &hand = current().hand;
         assert(step.arg < hand.size());
-        auto c = hand.draw(step.arg);
+        const auto c = hand.draw(step.arg);
         const auto &card = Card::Get(c);
         LOG("<player {}:discard {}>", current().id, to_string(card));
         deck->discardCard(card);
@@ -406,12 +406,8 @@ struct State {
 
     void drawCard(const Move::Step &step) {
         TRACE();
-        CardRef c;
-        switch (step.arg) {
-        case 0: c = deck->drawCharacter(); break;
-        case 1: c = deck->drawSkill(); break;
-        default: ERROR("unhandled");
-        }
+        assert(step.arg == 0 || step.arg == 1);
+        const auto c = step.arg == 0 ? deck->drawCharacter() : deck->drawSkill();
         logDraw(current().id, c);
         current().hand.insert(c);
     }
@@ -440,21 +436,21 @@ struct State {
 
     void knockoutChar(size_t i) {
         TRACE();
-        auto c = playerArg(i).visible.removeCharacter(indexArg(i));
+        const auto c = playerArg(i).visible.removeCharacter(indexArg(i));
         logOpponentAction(i, "knockout");
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutStyle(size_t i) {
         TRACE();
-        auto c = playerArg(i).visible.removeStyle(indexArg(i));
+        const auto c = playerArg(i).visible.removeStyle(indexArg(i));
         logOpponentAction(i, "knockout style");
         deck->discardCard(Card::Get(c));
     }
 
     void knockoutWeapon(size_t i) {
         TRACE();
-        auto c = playerArg(i).visible.removeWeapon(indexArg(i));
+        const auto c = playerArg(i).visible.removeWeapon(indexArg(i));
         logOpponentAction(i, "knockout weapon");
         deck->discardCard(Card::Get(c));
     }
@@ -484,8 +480,8 @@ struct State {
         case Action::KNOCKOUT_WEAPON:    knockoutWeapon(step.arg); break;
         case Action::TRADE_HAND:         tradeHand(step); break;
         case Action::CLEAR_FIELD:        discardVisible(); break;
-
         case Action::DISARM_CHARACTER:   disarm(step.arg); break;
+
         case Action::PLAY_WEAPON_RETAIN:
         case Action::CAPTURE_WEAPON:
         case Action::PLAY_CHARACTER:
@@ -511,18 +507,10 @@ struct State {
         TRACE();
         auto &p = current();
         switch (card.type) {
-        case CHARACTER:
-            p.placeCharacter(card);
-            break;
-        case STYLE:
-            p.placeStyle(card, step.arg);
-            break;
-        case WEAPON:
-            p.placeWeapon(card, step.arg);
-            break;
-        case WRENCH:
-            deck->discardCard(card);
-            break;
+        case CHARACTER: p.placeCharacter(card); break;
+        case STYLE:     p.placeStyle(card, step.arg); break;
+        case WEAPON:    p.placeWeapon(card, step.arg); break;
+        case WRENCH:    deck->discardCard(card); break;
         default:
             WARN("unhandled: {}", to_string(card));
             deck->discardCard(card);
@@ -540,17 +528,7 @@ struct State {
             assert(step.index < p.hand.size());
             assert(step.card < NUM_CARDS);
 
-            auto c = p.hand.draw(step.index);
-#if 0
-            if (step.card != c) {
-                auto &a = Card::Get(step.card);
-                auto &b = Card::Get(c);
-                LOG("STEP:");
-                a.debug();
-                LOG("HAND");
-                b.debug();
-            }
-#endif
+            const auto c = p.hand.draw(step.index);
             assert(step.card == c);
 
             playCard(step, Card::Get(c));

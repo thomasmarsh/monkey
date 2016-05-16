@@ -15,8 +15,18 @@ int main() {
     SET_LOG_LEVEL(trace);
     Initialize();
 
-    GameUI::New()->play();
-    //for (int i=0; i < 10000; ++i) {
-    //    Game().play();
-    //}
+    const auto start = std::chrono::steady_clock::now();
+
+    //GameUI::New()->play();
+    const size_t samples = 10000;
+    for (int i=0; i < samples; ++i) {
+        Game().play();
+    }
+
+    const auto end = std::chrono::steady_clock::now();
+    const auto diff = end - start;
+    const auto count = std::chrono::duration<double, std::milli>(diff).count();
+    printf("execution time: %.2f ms\n", count);
+    printf("    per sample: %.4f ms\n", count/samples);
+    printf(" samples / sec: %d\n", (int)(samples/(count/1000)));
 }

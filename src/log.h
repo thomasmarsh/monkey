@@ -4,7 +4,7 @@
 
 #include <stack>
 
-//#define NO_LOGGING
+#define NO_LOGGING
 
 #define NO_DEBUG
 #define NO_TRACE

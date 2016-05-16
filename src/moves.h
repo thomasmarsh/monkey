@@ -61,7 +61,7 @@ struct Moves {
     void findCardMoves(uint8_t i, const Card &card) {
         TRACE();
 
-        auto initial_count = moves.size();
+        const auto initial_count = moves.size();
 
         switch (card.arg_type) {
         case ArgType::RECV_STYLE:           styleMoves(i, card); break;
@@ -148,17 +148,17 @@ struct Moves {
     }
 
     std::vector<uint8_t> findStylesFromIndex(uint8_t i, const Card &card) {
-        auto nc  = player.hand.characters.size();
-        auto &skills = player.hand.skills;
+        const auto nc  = player.hand.characters.size();
+        const auto &skills = player.hand.skills;
 
         std::vector<uint8_t> matches;
         matches.reserve(skills.size());
 
         // The current index in the skills portion of the hand is `i - nc`. We forward to that
         // position + 1, so we are at the next card in the hand.
-        auto ns = skills.size();
+        const auto ns = skills.size();
         for (uint8_t j=(i-nc)+1; j < ns; ++j) {
-            auto &c = Card::Get(skills[j]);
+            const auto &c = Card::Get(skills[j]);
             if (c.type == STYLE) {
                 // We need to add back `nc` to restore it from a skill- to a hand relative index.
                 matches.push_back(j + nc);
@@ -176,7 +176,7 @@ struct Moves {
             return;
         }
 
-        auto styles = findStylesFromIndex(i, card);
+        const auto styles = findStylesFromIndex(i, card);
 
         // No matches found means we only have one more card of this type in the hand after the
         // start position.
@@ -195,10 +195,10 @@ struct Moves {
         assert(i != 0xFF);
         for (uint8_t c : EachBit(mask)) {
             // For each other card in hand
-            for (auto j : styles) {
+            for (const auto j : styles) {
                 assert(j > i);
                 assert(j != 0xFF);
-                auto card2 = Card::Get(player.hand.at(j));
+                const auto &card2 = Card::Get(player.hand.at(j));
                 add({{card2.action, card2.id, j, c},
                      {card.action, card.id, i, c}});
             }
@@ -207,7 +207,7 @@ struct Moves {
 
     void visibleOrHoldMoves(uint8_t i, const Card &card) {
         TRACE();
-        auto n = player.visible.num_characters;
+        const auto n = player.visible.num_characters;
         assert(n == player.visible.characters.size());
         uint8_t x = 0;
         for (; x < n; ++x) {
@@ -247,7 +247,7 @@ struct Moves {
     }
 
     void addDoubleChar(State &clone, const Move::Step &first, uint8_t j) {
-        Moves m(clone, j);
+        const Moves m(clone, j);
         for (const auto &move : m.moves) {
             assert(move.second.isNull());
             add({first, move.first});
@@ -256,9 +256,10 @@ struct Moves {
 
     void charHandMoves(uint8_t i, const Card &card) {
         auto clone = state;
-        auto first = Move::Step(Action::NONE, card.id, i);
+        const auto first = Move::Step(Action::NONE, card.id, i);
         clone.processStep(first);
-        for (uint8_t j=0; j < clone.players[player.id].hand.characters.size(); ++j) {
+        const auto n = clone.players[player.id].hand.characters.size();
+        for (uint8_t j=0; j < n; ++j) {
             addDoubleChar(clone, first, j);
         }
     }
@@ -362,7 +363,7 @@ struct Moves {
     void print() const {
 #ifndef NO_LOGGING
         LOG("Moves:");
-        for (auto &m : moves) {
+        for (const auto &m : moves) {
             LOG("    {}", to_string(m));
         }
 #endif
