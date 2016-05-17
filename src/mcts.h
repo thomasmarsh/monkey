@@ -84,7 +84,9 @@ struct MCTSAgent {
 
     void loop(NodeT::Ptr root, const State &root_state) {
         TRACE();
+#ifndef NO_LOGGING
         ScopedLogLevel l(LogContext::Level::warn);
+#endif
 
         auto initial = State::New(root_state);
         initial->randomizeHiddenState();
@@ -116,6 +118,7 @@ struct MCTSAgent {
         }
 
         std::vector<std::pair<Move,size_t>> merge;
+        merge.reserve(num_trees);
         for (size_t i=0; i < num_trees; ++i) {
             t[i].join();
         }
@@ -139,7 +142,9 @@ struct MCTSAgent {
 
     Move parallelSearch(const State &root_state) {
         TRACE();
+#ifndef NO_LOGGING
         ScopedLogLevel l(LogContext::Level::warn);
+#endif
         auto merge = iterateAndMerge(root_state);
 
         // This can happen at the last move; not entirely sure why.
@@ -153,7 +158,9 @@ struct MCTSAgent {
             return a.second > b.second;
         });
 
+#ifndef NO_LOGGING
         ScopedLogLevel l2(LogContext::Level::info);
+#endif
         LOG("Search results:");
         for (const auto &e : merge) {
             LOG("    {} {}", e.second, to_string(e.first));
@@ -194,6 +201,7 @@ struct MCTSAgent {
 
     // Randomize the hidden state.
     std::pair<StatePtr,StatePtr> determinize(const StatePtr &root_state, size_t i) {
+        TRACE();
         auto initial = root_state;
         auto state = State::New(*root_state);
         if (policy == MCTSRand::ALWAYS || (policy == MCTSRand::ONCE && i == 0)) {
@@ -203,14 +211,17 @@ struct MCTSAgent {
         return {initial, state};
     }
 
-    // TODO: generalize Moves to take move type argument, but need careful handling of `allocated`
     std::vector<Move> search(StatePtr state, NodeT::Ptr node) {
+        TRACE();
+#ifndef NO_LOGGING
         ScopedLogLevel l(LogContext::Level::warn);
+#endif
         Moves m(*state);
         return m.moves;
     }
 
     std::pair<StatePtr, NodeT::Ptr> select(StatePtr state, NodeT::Ptr node) {
+        TRACE();
         auto moves = search(state, node);
         DLOG("moves.size() = {}", moves.size());
 
@@ -231,7 +242,8 @@ struct MCTSAgent {
 
     // Create a new node to explore.
     std::pair<StatePtr, NodeT::Ptr> expand(StatePtr state, NodeT::Ptr node, MoveList &untried) {
-        if (!untried.empty()) {
+        TRACE();
+        if (!untried.empty() && !state->gameOver()) {
             auto m = untried[urand(untried.size())];
             auto &p = state->current();
             perform(m, state);
@@ -241,6 +253,7 @@ struct MCTSAgent {
     }
 
     StatePtr iterate(NodeT::Ptr root, StatePtr initial, int i) {
+        TRACE();
         auto node = root;
 
         // Determinize

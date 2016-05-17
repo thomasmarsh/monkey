@@ -31,33 +31,25 @@ enum class Special : uint8_t {
 };
 
 enum class Action : uint8_t {
-    // action               // arg_type                 next action
-    NONE,                   // -                        -
-    PASS,                   // -                        -
-    CONCEDE,                // -                        -
-    CLEAR_FIELD,            // -                        -
-    STEAL_CARD,             // OPPONENT_HAND            -
-    TRADE_HAND,             // OPPONENT                 -
-    DISCARD_ONE,            // HAND                     -
-    DRAW_CARD,              // DRAW_PILE                -
-    PLAY_WEAPON,            // VISIBLE_CHAR             -
-    PLAY_STYLE,             // VISIBLE_CHAR             -
-    DISARM_CHARACTER,       // OPPONENT_EMPTY_CHAR      -
-    KNOCKOUT_CHARACTER,     // OPPONENT_EMPTY_CHAR      -
-    KNOCKOUT_STYLE,         // OPPONENT_STYLE_CHAR      -
-    KNOCKOUT_WEAPON,        // OPPONENT_WEAPON_CHAR     -
-    PLAY_WEAPON_RETAIN,     // VISIBLE_CHAR_OR_HOLD     -
-    CAPTURE_WEAPON,         // OPPONENT_WEAPON_CHAR     PLAY_WEAPON_RETAIN
+    // action               // arg_type
+    NONE,                   // -
+    PASS,                   // -
+    CONCEDE,                // -
+    CLEAR_FIELD,            // -
+    PLAY_CHARACTER,         // -
+    STEAL_CARD,             // OPPONENT_HAND
+    TRADE_HAND,             // OPPONENT
+    DISCARD_ONE,            // HAND
+    DRAW_CARD,              // DRAW_PILE
+    PLAY_WEAPON,            // VISIBLE_CHAR
+    PLAY_STYLE,             // VISIBLE_CHAR
+    DISARM_CHARACTER,       // OPPONENT_EMPTY_CHAR
+    KNOCKOUT_CHARACTER,     // OPPONENT_EMPTY_CHAR
+    KNOCKOUT_STYLE,         // OPPONENT_STYLE_CHAR
+    KNOCKOUT_WEAPON,        // OPPONENT_WEAPON_CHAR
+    PLAY_WEAPON_RETAIN,     // VISIBLE_CHAR_OR_HOLD
+    CAPTURE_WEAPON,         // OPPONENT_WEAPON_CHAR
 
-    PLAY_CHARACTER,         // -                        -
-                            // -                        PLAY_CHARACTER
-                            // -                        KNOCKOUT_STYLE
-                            // -                        KNOCKOUT_WEAPON
-                            // -                        CAPTURE_WEAPON
-                            // -                        STEAL_CARD
-                            // -                        DISCARD_ONE
-                            // -                        TRADE_HAND
-                            // -                        DRAW_CARD
     // events
     E_DRAW_TWO_SKILLS,
     E_NO_STYLES,

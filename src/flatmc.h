@@ -117,8 +117,10 @@ struct MCAgent {
     }
 
     void dispatchSearch(const Moves &m, MoveStats &stats) {
+#ifndef NO_LOGGING
         SCOPED_LOG(warn);
         ScopedLogLevel l(LogContext::Level::warn);
+#endif
 
         size_t samples = mc_len * m.moves.size() / concurrency;
         if (concurrency == 1) {
@@ -133,7 +135,9 @@ struct MCAgent {
 
         Move best;
         {
+#ifndef NO_LOGGING
             ScopedLogLevel l(LogContext::Level::warn);
+#endif
             Moves m(s);
             assert(!m.moves.empty());
 
@@ -148,7 +152,9 @@ struct MCAgent {
             best = m.moves[findBest(stats)];
 
             {
+#ifndef NO_LOGGING
                 ScopedLogLevel l(LogContext::Level::info);
+#endif
                 logStats(m, stats);
             }
         }
