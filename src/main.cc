@@ -17,11 +17,11 @@ int main() {
 
     const auto start = std::chrono::steady_clock::now();
 
-    //GameUI::New()->play();
+    GameUI::New()->play();
     const size_t samples = 10000;
-    for (int i=0; i < samples; ++i) {
-        Game().play();
-    }
+    //for (int i=0; i < samples; ++i) {
+    //    Game().play();
+    //}
 
     const auto end = std::chrono::steady_clock::now();
     const auto diff = end - start;

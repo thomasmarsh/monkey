@@ -3,6 +3,7 @@
 #include "naive.h"
 #include "flatmc.h"
 #include "mcts.h"
+#include "human.h"
 
 struct Game {
     State state;
@@ -22,7 +23,7 @@ struct Game {
         case 1: MCTSAgent(1000).move(state); break;
         case 2: MCAgent().move(state); break;
         case 3: NaiveAgent().move(state); break;
-        case 0: RandomAgent().move(state); break;
+        case 0: HumanAgent().move(state); break;
         default: ERROR("unhandled move");
         }
     }

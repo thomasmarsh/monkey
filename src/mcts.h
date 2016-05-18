@@ -36,11 +36,11 @@ struct MCTSAgent {
     using MoveList = NodeT::MoveList;
     using StatePtr = std::shared_ptr<State>;
 
-    size_t itermax;
-    size_t num_trees;
-    float exploration;
+    const size_t itermax;
+    const size_t num_trees;
+    const float exploration;
     size_t move_count;
-    MCTSRand policy;
+    const MCTSRand policy;
 
     // suggest imax=1,000..10,000, n=8..10, c=0.7
     MCTSAgent(size_t imax=1000, size_t n=8, float c=0.7, MCTSRand p=MCTSRand::ALWAYS)
@@ -59,7 +59,7 @@ struct MCTSAgent {
                            exploration);
     }
 
-    void validate(const Move::Step &step) {
+    void validate(const Move::Step &step) const {
 #ifndef NDEBUG
         if (step.card != CardRef(-1)) {
             auto card = Card::Get(step.card);
@@ -70,19 +70,19 @@ struct MCTSAgent {
 #endif
     }
 
-    void validate(const Move &move) {
+    void validate(const Move &move) const {
         validate(move.first);
         validate(move.second);
     }
 
-    void perform(const Move &move, StatePtr &state) {
+    void perform(const Move &move, StatePtr &state) const {
         TRACE();
         validate(move);
         state->perform(move);
         state->checkReset();
     }
 
-    void loop(NodeT::Ptr root, const State &root_state) {
+    void loop(NodeT::Ptr root, const State &root_state) const {
         TRACE();
 #ifndef NO_LOGGING
         ScopedLogLevel l(LogContext::Level::warn);
@@ -96,7 +96,7 @@ struct MCTSAgent {
         }
     }
 
-    void move(State &root_state) {
+    void move(State &root_state) const {
         TRACE();
         assert(!root_state.gameOver());
         auto m = parallelSearch(root_state);
@@ -104,7 +104,7 @@ struct MCTSAgent {
         root_state.perform(m);
     }
 
-    std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) {
+    std::vector<std::pair<Move,size_t>> iterateAndMerge(const State &root_state) const {
         TRACE();
 
         std::vector<NodeT::Ptr> root_nodes(num_trees);
@@ -140,7 +140,7 @@ struct MCTSAgent {
         return merge;
     }
 
-    Move parallelSearch(const State &root_state) {
+    Move parallelSearch(const State &root_state) const {
         TRACE();
 #ifndef NO_LOGGING
         ScopedLogLevel l(LogContext::Level::warn);
@@ -200,7 +200,7 @@ struct MCTSAgent {
     }
 
     // Randomize the hidden state.
-    std::pair<StatePtr,StatePtr> determinize(const StatePtr &root_state, size_t i) {
+    std::pair<StatePtr,StatePtr> determinize(const StatePtr &root_state, size_t i) const {
         TRACE();
         auto initial = root_state;
         auto state = State::New(*root_state);
@@ -211,7 +211,7 @@ struct MCTSAgent {
         return {initial, state};
     }
 
-    std::vector<Move> search(StatePtr state, NodeT::Ptr node) {
+    std::vector<Move> search(StatePtr state, NodeT::Ptr node) const {
         TRACE();
 #ifndef NO_LOGGING
         ScopedLogLevel l(LogContext::Level::warn);
@@ -220,7 +220,7 @@ struct MCTSAgent {
         return m.moves;
     }
 
-    std::pair<StatePtr, NodeT::Ptr> select(StatePtr state, NodeT::Ptr node) {
+    std::pair<StatePtr, NodeT::Ptr> select(StatePtr state, NodeT::Ptr node) const {
         TRACE();
         auto moves = search(state, node);
         DLOG("moves.size() = {}", moves.size());
@@ -241,7 +241,7 @@ struct MCTSAgent {
     }
 
     // Create a new node to explore.
-    std::pair<StatePtr, NodeT::Ptr> expand(StatePtr state, NodeT::Ptr node, MoveList &untried) {
+    std::pair<StatePtr, NodeT::Ptr> expand(StatePtr state, NodeT::Ptr node, MoveList &untried) const {
         TRACE();
         if (!untried.empty() && !state->gameOver()) {
             auto m = untried[urand(untried.size())];
@@ -252,7 +252,7 @@ struct MCTSAgent {
         return {state, node};
     }
 
-    StatePtr iterate(NodeT::Ptr root, StatePtr initial, int i) {
+    StatePtr iterate(NodeT::Ptr root, StatePtr initial, int i) const {
         TRACE();
         auto node = root;
 
@@ -277,7 +277,7 @@ struct MCTSAgent {
         return initial;
     }
 
-    void log(NodeT::Ptr root, const State &state) {
+    void log(NodeT::Ptr root, const State &state) const {
         DLOG("exploration tree:");
         root->printTree();
         LOG("player {} children:", state.current().id);

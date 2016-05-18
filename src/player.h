@@ -22,7 +22,14 @@ struct Player {
         score           = 0;
     }
 
-    void placeCharacter(const Card &card)        { visible.placeCharacter(card); }
+    void placeCharacter(const Card &card)        {
+        visible.placeCharacter(card);
+
+        if (affinity == Affinity::NONE) {
+            affinity = card.affinity;
+        }
+    }
+
     void placeStyle(const Card &card, size_t i)  { visible.placeStyle(card, i); }
     void placeWeapon(const Card &card, size_t i) { visible.placeWeapon(card, i); }
 

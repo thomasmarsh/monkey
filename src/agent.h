@@ -33,7 +33,7 @@ inline void Rollout(State &s, A &agent) {
 struct RandomAgent {
     std::string name() const { return "Random"; }
 
-    void move(State &s) {
+    void move(State &s) const {
         const Moves m(s);
         RandomMove(m, s);
     }

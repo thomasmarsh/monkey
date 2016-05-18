@@ -220,7 +220,7 @@ struct Moves {
     void opponentMoves(uint8_t i, const Card &card) {
         TRACE();
         for (uint8_t p=0; p < state.players.size(); ++p) {
-            if (p != player.id) {
+            if (p != player.id && !state.challenge.round.conceded.test(i)) {
                 add({card.action, card.id, i, p});
             }
         }
@@ -229,7 +229,7 @@ struct Moves {
     void opponentHandMoves(uint8_t i, const Card &card) {
         TRACE();
         for (uint8_t p=0; p < state.players.size(); ++p) {
-            if (p != player.id) {
+            if (p != player.id && !state.challenge.round.conceded.test(i)) {
                 if (!state.players[p].hand.empty()) {
                     add({card.action, card.id, i, p});
                 }
