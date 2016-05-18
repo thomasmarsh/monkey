@@ -159,11 +159,11 @@ struct MCTSAgent {
         });
 
 #ifndef NO_LOGGING
-        ScopedLogLevel l2(LogContext::Level::info);
+        //ScopedLogLevel l2(LogContext::Level::info);
 #endif
-        LOG("Search results:");
+        //LOG("Search results:");
         for (const auto &e : merge) {
-            LOG("    {} {}", e.second, to_string(e.first));
+            //LOG("    {} {}", e.second, to_string(e.first));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;

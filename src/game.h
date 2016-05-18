@@ -55,10 +55,10 @@ struct Game {
             while (!state.challenge.finished()) {
                 LOG("ROUND <{}>", round_num);
                 while (!state.challenge.round.finished()) {
-                    announcePlayer();
+                    //announcePlayer();
                     move();
                     if (callback) { callback(); }
-                    printVisible();
+                    //printVisible();
                 }
                 state.challenge.round.reset();
                 if (state.gameOver()) {

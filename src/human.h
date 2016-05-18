@@ -5,7 +5,16 @@
 struct HumanAgent {
     std::string name() const { return "Human"; }
 
-    void printMoves(const Moves &m) const {
+    void announce(const State &s, const Moves &m) const {
+        printf("Hand:\n");
+        printf("    CHARACTERS\n");
+        for (const auto &c : s.current().hand.characters) {
+            printf("    %s\n", to_string(Card::Get(c)).c_str());
+        }
+        printf("    SKILLS\n");
+        for (const auto &c : s.current().hand.skills) {
+            printf("    %s\n", to_string(Card::Get(c)).c_str());
+        }
         printf("Available moves:\n");
         printf("\n");
         for (int i=0; i < m.moves.size(); ++i) {
@@ -34,7 +43,7 @@ struct HumanAgent {
         const Moves m(s);
         size_t index = 0;
 
-        printMoves(m);
+        announce(s, m);
 
         while (true) {
             index = chooseMove(s.current().id);

@@ -155,7 +155,7 @@ struct MCAgent {
 #ifndef NO_LOGGING
                 ScopedLogLevel l(LogContext::Level::info);
 #endif
-                logStats(m, stats);
+                //logStats(m, stats);
             }
         }
         s.perform(best);

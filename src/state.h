@@ -390,6 +390,11 @@ struct State {
         challenge.round.concede();
     }
 
+    void clearField() {
+        LOG("<player {}:clear field>", current().id);
+        discardVisible();
+    }
+
     void discardOne(const Move::Step &step) {
         TRACE();
         auto &hand = current().hand;
@@ -479,7 +484,7 @@ struct State {
         case Action::KNOCKOUT_STYLE:     knockoutStyle(step.arg); break;
         case Action::KNOCKOUT_WEAPON:    knockoutWeapon(step.arg); break;
         case Action::TRADE_HAND:         tradeHand(step); break;
-        case Action::CLEAR_FIELD:        discardVisible(); break;
+        case Action::CLEAR_FIELD:        clearField(); break;
         case Action::DISARM_CHARACTER:   disarm(step.arg); break;
 
         case Action::PLAY_WEAPON_RETAIN:
