@@ -17,7 +17,8 @@ int main() {
 
     const auto start = std::chrono::steady_clock::now();
 
-    GameUI::New()->play();
+    //GameUI::New()->play();
+    Game().play();
     const size_t samples = 10000;
     //for (int i=0; i < samples; ++i) {
     //    Game().play();

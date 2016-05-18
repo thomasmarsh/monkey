@@ -1,5 +1,6 @@
 #pragma once
 
+#include "debug.h"
 #include "deck.h"
 #include "challenge.h"
 #include "player.h"
@@ -400,7 +401,7 @@ struct State {
 
     void clearField() {
         if (!quiet) {
-            __asm__("int $3");
+            //DEBUG_BREAK();
         }
         SLOG("<player {}:clear field>", current().id);
         discardVisible();

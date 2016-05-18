@@ -5,6 +5,9 @@
 
 
 struct NaiveAgent {
+    using Values = std::vector<int>;
+    bool quiet;
+
     std::string name() const { return "Naive"; }
 
     int cardValue(const Card &c, const State &s) const {
@@ -32,11 +35,10 @@ struct NaiveAgent {
         return Affinity::NONE;
     }
 
-    int stateValue(const State &s) const {
-        const auto &p = s.current();
-        int value = p.visible.played_value;
+    int stateValue(const State &s, const uint8_t p) const {
+        int value = s.players[p].visible.played_value;
         for (const auto &o : s.players) {
-            if (o.id != p.id && !s.challenge.round.conceded.test(o.id)) {
+            if (o.id != p && !s.challenge.round.conceded.test(o.id)) {
                 value -= o.visible.played_value;
             }
         }
@@ -60,13 +62,16 @@ struct NaiveAgent {
         }
         auto clone = s;
         clone.perform(m);
-        return stateValue(clone) - stateValue(s);
+        const auto a = stateValue(s, s.current().id);
+        const auto b = stateValue(clone, s.current().id);
+        return b - a;
     }
 
-    int standardValues(const State &s, const Moves &m, std::vector<int> &values) const {
+    int standardValues(const State &s, const Moves &m, Values &values) const {
         int min = 0;
+        auto best = bestSide(s);
         for (const auto &move : m.moves) {
-            auto v = moveValue(move, s);
+            auto v = cardAdjust(best, move) + moveValue(move, s);
             values.push_back(v);
             if (v < min) {
                 min = v;
@@ -75,25 +80,22 @@ struct NaiveAgent {
         return min;
     }
 
-    int cardMultiplier(Affinity a, const Move &m) const {
-        if (a == Affinity::NONE) {
-            return 1;
+    int cardAdjust(Affinity target, const Move &m) const {
+        if (target == Affinity::NONE || m.card() == Move::null) {
+            return 0;
         }
-
-        assert(m.card() != Move::null);
         const auto &card = Card::Get(m.card());
-        if (a == card.affinity) {
-            return 10;
-        } else if (card.affinity == Affinity::NONE) {
-            return 5;
+        if (target == card.affinity || card.affinity == Affinity::NONE) {
+            return 0;
         }
-        return 1;
+        return -40;
     }
 
-    int firstValues(const State &s, const Moves &m, Affinity a, std::vector<int> &values) const {
+    int firstValues(const State &s, const Moves &m, Affinity target, Values &values) const {
         int min = 0;
         for (const auto &move : m.moves) {
-            auto v = cardMultiplier(a, move)*moveValue(move, s);
+            assert(m.card() != Move::null);
+            auto v = cardAdjust(target, move)+moveValue(move, s);
             values.push_back(v);
             if (v < min) {
                 min = v;
@@ -106,7 +108,7 @@ struct NaiveAgent {
         return s.current().visible.empty();
     }
 
-    int normalize(std::vector<int> &values, int min) const {
+    int normalize(Values &values, int min) const {
         int sum = 0;
         for (size_t i=0; i < values.size(); ++i) {
             values[i] = 1+(values[i]-min);
@@ -115,30 +117,36 @@ struct NaiveAgent {
         return sum;
     }
 
-    void move(State &s) {
-        const Moves moves(s);
-
-        std::vector<int> values;
-        values.reserve(moves.moves.size());
-
+    int checkFirstMove(const State &s, const Moves &moves, Values &values) const {
         int min = 0;
-        bool found = false;
         if (isFirstMove(s) && !s.current().discard_two) {
             auto best = bestSide(s);
             if (best != Affinity::NONE) {
-                found = true;
                 min = firstValues(s, moves, best, values);
             }
         }
+        return min;
+    }
 
-        if (!found) {
+    void print(const Moves &moves, const Values &values) {
+        if (!quiet) {
+            printf("VALUE:\n");
+            for (int i=0; i < values.size(); ++i) {
+                printf("    %3d: %s\n", values[i], to_string(moves.moves[i]).c_str());
+            }
+        }
+    }
+
+    int findMoveValues(const State &s, const Moves &moves, Values &values) const {
+        auto min = checkFirstMove(s, moves, values);
+        if (values.empty()) {
             min = standardValues(s, moves, values);
         }
+        return min;
+    }
 
-        auto sum = normalize(values, min);
-        const auto choice = urand(sum);
-
-        sum = 0;
+    void perform(State &s, const size_t choice, const Moves &moves, const Values &values) const {
+        int sum = 0;
         size_t i = 0;
         for (const auto &m : moves.moves) {
             sum += values[i];
@@ -149,5 +157,18 @@ struct NaiveAgent {
             }
         }
         ERROR("unreached");
+    }
+
+    void move(State &s) {
+        quiet = s.quiet;
+        const Moves moves(s);
+
+        std::vector<int> values;
+        values.reserve(moves.moves.size());
+
+        const auto min = findMoveValues(s, moves, values);
+        const auto sum = normalize(values, min);
+        //print(moves, values);
+        perform(s, urand(sum), moves, values);
     }
 };
