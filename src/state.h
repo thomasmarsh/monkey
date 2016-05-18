@@ -6,15 +6,22 @@
 #include "move.h"
 #include "util.h"
 
+#define SLOG(fmt, ...) \
+    if (!quiet) { \
+        BASE_LOG(info, fmt, ##__VA_ARGS__); \
+    }
+
 struct State {
     Deck::Ptr            deck;
     std::vector<CardRef> events;
     std::vector<Player>  players;
     Challenge            challenge;
+    bool                 quiet;
 
     State(size_t num_players)
     : deck(std::make_shared<Deck>())
     , challenge(num_players)
+    , quiet(false)
     {
         TRACE();
         for (size_t i=0; i < num_players; ++i) {
@@ -27,6 +34,7 @@ struct State {
     , events(rhs.events)
     , players(rhs.players)
     , challenge(rhs.challenge)
+    , quiet(true)
     {
         TRACE();
         assert(*deck == *rhs.deck);
@@ -141,9 +149,9 @@ struct State {
             }
         }
         if (count > 0) {
-            LOG("tie - no points for anyone");
+            SLOG("tie - no points for anyone");
         } else {
-            LOG("player {} is the winner with {} points", best, points);
+            SLOG("player {} is the winner with {} points", best, points);
             players[best].score += points;
         }
     }
@@ -177,7 +185,7 @@ struct State {
         for (size_t i=1; i < players.size(); ++i) {
             s += "/" + std::to_string(players[i].score);
         }
-        LOG("Score: {}", s);
+        SLOG("Score: {}", s);
     }
 
     void discardVisible() {
@@ -279,7 +287,7 @@ struct State {
         const auto c = deck->drawEvent();
         events.push_back(c);
         const auto &card = Card::Get(c);
-        LOG("<event:{}>", to_string(card));
+        SLOG("<event:{}>", to_string(card));
         handleEvent(card);
     }
 
@@ -290,7 +298,7 @@ struct State {
         case Action::E_NO_WEAPONS:      challenge.no_weapons = true; break;
         case Action::E_CHAR_BONUS:      challenge.char_bonus = true; break;
         case Action::E_INVERT_VALUE:    playersInvertValue();  break;
-        case Action::E_DISCARD_TWO:     playersDiscardTwo();
+        case Action::E_DISCARD_TWO:     playersDiscardTwo(); break;
         case Action::E_DRAW_ONE_CHAR:   playersDrawOneCharacter(); break;
         case Action::E_DRAW_TWO_SKILLS: playersDrawTwoSkills(); break;
         case Action::E_RANDOM_STEAL:    playersRandomSteal(); break;
@@ -301,7 +309,7 @@ struct State {
     }
 
     void logDraw(size_t i, CardRef c) {
-        LOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
+        SLOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
     }
 
     void playersInvertValue() {
@@ -366,10 +374,10 @@ struct State {
             if (hasCard[i]) {
                 size_t left = (i+1) % np;
                 auto &recipient = players[left];
-                LOG("<transfer_card:{}->{} {}>",
-                    i,
-                    left,
-                    to_string(Card::Get(stolen[i])));
+                SLOG("<transfer_card:{}->{} {}>",
+                     i,
+                     left,
+                     to_string(Card::Get(stolen[i])));
 
                 recipient.hand.insert(stolen[i]);
             }
@@ -380,18 +388,21 @@ struct State {
 
     void pass() {
         TRACE();
-        LOG("<player {}:pass>", current().id);
+        SLOG("<player {}:pass>", current().id);
         challenge.round.pass();
     }
 
     void concede() {
         TRACE();
-        LOG("<player {}:concede>", current().id);
+        SLOG("<player {}:concede>", current().id);
         challenge.round.concede();
     }
 
     void clearField() {
-        LOG("<player {}:clear field>", current().id);
+        if (!quiet) {
+            __asm__("int $3");
+        }
+        SLOG("<player {}:clear field>", current().id);
         discardVisible();
     }
 
@@ -401,7 +412,7 @@ struct State {
         assert(step.arg < hand.size());
         const auto c = hand.draw(step.arg);
         const auto &card = Card::Get(c);
-        LOG("<player {}:discard {}>", current().id, to_string(card));
+        SLOG("<player {}:discard {}>", current().id, to_string(card));
         deck->discardCard(card);
 
         if (step.index == Move::null) {
@@ -421,8 +432,7 @@ struct State {
         TRACE();
         auto &other = players[step.arg];
         auto c = other.hand.drawRandom();
-        LOG("<player {}:steal {} {}>",
-            current().id, other.id, to_string(Card::Get(c)));
+        SLOG("<player {}:steal {} {}>", current().id, other.id, to_string(Card::Get(c)));
         current().hand.insert(c);
     }
 
@@ -431,7 +441,7 @@ struct State {
     uint8_t indexArg(uint8_t arg) const { return arg & 0xF; }
 
     void logOpponentAction(uint8_t i, const std::string &label) const {
-        LOG("<player {}:{} player {} char {}>", current().id, label, playerArg(i).id, indexArg(i));
+        SLOG("<player {}:{} player {} char {}>", current().id, label, playerArg(i).id, indexArg(i));
     }
 
     void disarm(uint8_t i) {
@@ -462,7 +472,7 @@ struct State {
 
     void tradeHand(const Move::Step &step) {
         TRACE();
-        LOG("<player {} and {}:swap hand>", current().id, step.arg);
+        SLOG("<player {} and {}:swap hand>", current().id, step.arg);
         std::swap(current().hand, players[step.arg].hand);
     }
 
@@ -529,7 +539,7 @@ struct State {
         if (step.index != Move::null) {
             auto &p = current();
 
-            LOG("<player {}:play {}>", p.id, to_string(step));
+            SLOG("<player {}:play {}>", p.id, to_string(step));
             assert(step.index < p.hand.size());
             assert(step.card < NUM_CARDS);
 
@@ -556,3 +566,5 @@ struct State {
         step();
     }
 };
+
+#undef SLOG

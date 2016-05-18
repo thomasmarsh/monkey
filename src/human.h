@@ -6,26 +6,26 @@ struct HumanAgent {
     std::string name() const { return "Human"; }
 
     void announce(const State &s, const Moves &m) const {
-        printf("Hand:\n");
-        printf("    CHARACTERS\n");
+        BASE_LOG(info, "Hand:");
+        BASE_LOG(info, "    CHARACTERS");
         for (const auto &c : s.current().hand.characters) {
-            printf("    %s\n", to_string(Card::Get(c)).c_str());
+            BASE_LOG(info, "    {}", to_string(Card::Get(c)).c_str());
         }
-        printf("    SKILLS\n");
+        BASE_LOG(info, "    SKILLS");
         for (const auto &c : s.current().hand.skills) {
-            printf("    %s\n", to_string(Card::Get(c)).c_str());
+            BASE_LOG(info, "    {}", to_string(Card::Get(c)).c_str());
         }
-        printf("Available moves:\n");
-        printf("\n");
+        BASE_LOG(info, "Available moves:");
+        BASE_LOG(info, "");
         for (int i=0; i < m.moves.size(); ++i) {
-            printf("%2d: %s\n", i, to_string(m.moves[i]).c_str());
+            BASE_LOG(info, "{:2d}: {}", i, to_string(m.moves[i]).c_str());
         }
-        printf("\n");
+        BASE_LOG(info, "");
     }
 
     size_t chooseMove(size_t id) const {
         TRACE();
-        printf("player %zu> ", id);
+        BASE_LOG(info, "player {}> ", id);
         std::string s;
         std::getline(std::cin, s);
         if (std::cin.eof()) {

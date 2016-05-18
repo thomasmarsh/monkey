@@ -114,6 +114,7 @@ struct Moves {
         }
 
         if (player.affinity == Affinity::NONE ||
+            player.ignore_affinity ||
             card.affinity == Affinity::NONE) {
             return true;
         }
