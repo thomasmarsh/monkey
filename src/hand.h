@@ -62,16 +62,16 @@ struct PlayerHand {
 #endif
 
     void print() const {
-#ifndef NO_LOGGING
-        LOG("Hand:");
-        LOG("    CHARACTERS");
+//#ifndef NO_LOGGING
+        BASE_LOG(info, "Hand:");
+        BASE_LOG(info, "    CHARACTERS");
         for (auto c : characters) {
-            LOG("    {}", to_string(Card::Get(c)));
+            BASE_LOG(info, "    {}", to_string(Card::Get(c)));
         }
-        LOG("    SKILLS");
+        BASE_LOG(info, "    SKILLS");
         for (auto c : skills) {
-            LOG("    {}", to_string(Card::Get(c)));
+            BASE_LOG(info, "    {}", to_string(Card::Get(c)));
         }
-#endif
+//#endif
     }
 };

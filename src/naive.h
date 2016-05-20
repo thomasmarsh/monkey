@@ -94,7 +94,7 @@ struct NaiveAgent {
     int firstValues(const State &s, const Moves &m, Affinity target, Values &values) const {
         int min = 0;
         for (const auto &move : m.moves) {
-            assert(m.card() != Move::null);
+            assert(move.card() != Move::null);
             auto v = cardAdjust(target, move)+moveValue(move, s);
             values.push_back(v);
             if (v < min) {

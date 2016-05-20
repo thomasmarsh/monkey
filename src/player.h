@@ -77,4 +77,4 @@ struct Player {
             }
         }
     };
-};
+} __attribute__((packed));

@@ -42,4 +42,4 @@ struct Challenge {
         round.debug();
     }
 #endif
-};
+} __attribute__((packed));

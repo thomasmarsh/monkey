@@ -8,9 +8,9 @@ struct PlayerVisible {
         CardRef card;
         Cards   styles;
         Cards   weapons;
-        bool    immune;
-        bool    two_weapons;
-        bool    disarmed;
+        bool    immune:1;
+        bool    two_weapons:1;
+        bool    disarmed:1;
 
         Character(CardRef c)
         : card(c)
@@ -39,7 +39,7 @@ struct PlayerVisible {
             }
         }
 #endif
-    };
+    } __attribute__ ((__packed__));
 
     size_t                 num_characters:4;
     bool                   invert_value:1;
@@ -300,4 +300,4 @@ struct PlayerVisible {
         }
 #endif// NO_LOGGING
     }
-};
+} __attribute__ ((__packed__));

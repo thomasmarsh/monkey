@@ -66,7 +66,7 @@ struct Moves {
         switch (card.arg_type) {
         case ArgType::RECV_STYLE:           styleMoves(i, card); break;
         case ArgType::RECV_WEAPON:          weaponMoves(i, card); break;
-        case ArgType::VISIBLE:              add(card.action); break;
+        case ArgType::VISIBLE:              add({card.action, card.id, i}); break;
         case ArgType::EXPOSED_CHAR:         maskedMoves(exposed.exposed_char, i, card); break;
         case ArgType::EXPOSED_STYLE:        maskedMoves(exposed.exposed_style, i, card); break;
         case ArgType::EXPOSED_WEAPON:       maskedMoves(exposed.exposed_weapon, i, card); break;
@@ -362,11 +362,11 @@ struct Moves {
     }
 
     void print() const {
-#ifndef NO_LOGGING
-        LOG("Moves:");
+//#ifndef NO_LOGGING
+        BASE_LOG(info, "Moves:");
         for (const auto &m : moves) {
-            LOG("    {}", to_string(m));
+            BASE_LOG(info, "    {}", to_string(m));
         }
-#endif
+//#endif
     }
 };

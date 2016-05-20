@@ -95,4 +95,4 @@ struct Round {
         DLOG("    finished()         = {}", finished());
     }
 #endif
-};
+} __attribute__((packed));

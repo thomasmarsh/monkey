@@ -169,6 +169,45 @@ struct Deck {
         return DrawCard(draw.characters);
     }
 
+    CardRef findCharacter(Affinity affinity,
+                          Special special,
+                          Action action,
+                          int value)
+    {
+        auto it = draw.characters.begin();
+        while (it != draw.characters.end()) {
+            const auto &card = Card::Get(*it);
+            if (card.affinity   == affinity &&
+                card.special    == special  &&
+                card.action     == action   &&
+                card.face_value == value)
+            {
+                draw.characters.erase(it);
+                return *it;
+            }
+
+            ++it;
+        }
+        return CardRef(-1);
+    }
+
+    CardRef findSkill(Action action, int value) {
+        auto it = draw.skills.begin();
+        while (it != draw.characters.end()) {
+            const auto c = *it;
+            const auto &card = Card::Get(c);
+            if (card.action     == action &&
+                card.face_value == value)
+            {
+                draw.skills.erase(it);
+                return c;
+            }
+
+            ++it;
+        }
+        return CardRef(-1);
+    }
+
     CardRef drawSkill() {
         if (draw.skills.empty()) {
             shuffleSkillDiscards();

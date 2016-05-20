@@ -41,8 +41,8 @@ struct Game {
 
     void announcePlayer() const {
         const auto &p = state.current();
-        LOG("");
-        LOG("PLAYER {} TO MOVE", p.id);
+        BASE_LOG(info, "");
+        BASE_LOG(info, "PLAYER {} TO MOVE", p.id);
         p.hand.print();
         Moves m(state);
         m.print();

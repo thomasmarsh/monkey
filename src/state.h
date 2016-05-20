@@ -17,7 +17,7 @@ struct State {
     std::vector<CardRef> events;
     std::vector<Player>  players;
     Challenge            challenge;
-    bool                 quiet;
+    bool                 quiet:1;
 
     State(size_t num_players)
     : deck(std::make_shared<Deck>())
@@ -310,6 +310,9 @@ struct State {
     }
 
     void logDraw(size_t i, CardRef c) {
+        if (!quiet && c == 0xB4) {
+            //DEBUG_BREAK();
+        }
         SLOG("<player {}:draw {}>", i, to_string(Card::Get(c)));
     }
 
@@ -566,6 +569,6 @@ struct State {
 
         step();
     }
-};
+} __attribute__((packed));
 
 #undef SLOG

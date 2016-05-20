@@ -17,6 +17,7 @@ int main() {
 
     const auto start = std::chrono::steady_clock::now();
 
+    BASE_LOG(info, "sizeof(Move): {}", sizeof(Move));
     //GameUI::New()->play();
     Game().play();
     const size_t samples = 10000;
