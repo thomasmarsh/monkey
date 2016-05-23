@@ -535,6 +535,9 @@ struct State {
             deck->discardCard(card);
             break;
         }
+        if (!quiet && card.action != Action::NONE) {
+            SLOG(">> {}", ActionDescription(card.action));
+        }
     }
 
     void processStep(const Move::Step &step) {

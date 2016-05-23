@@ -296,8 +296,8 @@ struct Moves {
 
         for (uint8_t i=0; i < player.hand.size()-1; ++i) {
             for (uint8_t j=i+1; j < player.hand.size(); ++j) {
-                add({{Action::DISCARD_ONE, CardRef(-1), Move::null, j},
-                     {Action::DISCARD_ONE, CardRef(-1), Move::null, i}});
+                add({{Action::DISCARD_ONE, CardRef(-1), Move::null, i},
+                     {Action::DISCARD_ONE, CardRef(-1), Move::null, uint8_t(j-1)}});
             }
         }
     }

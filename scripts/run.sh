@@ -33,11 +33,11 @@ check_charge() {
 }
 
 run_game() {
-    log=$1.log
+    log=build/$1.log
     if [ ! -f $log ]
     then
         echo Game $1
-        ../monkey > $log
+        build/monkey > $log
         tail $log
     fi
 }

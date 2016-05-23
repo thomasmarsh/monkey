@@ -20,12 +20,10 @@ struct Game {
 
     void move() {
         switch (state.current().id) {
-        case 0:
-        case 1: MCTSAgent(1000).move(state); break;
-        case 3:
-        case 2: MCAgent().move(state); break;
-        //case 3: NaiveAgent().move(state); break;
-        //case 0: HumanAgent().move(state); break;
+        case 0: MCTSAgent(1000).move(state); break;
+        case 1: MCAgent().move(state); break;
+        case 2: HumanAgent().move(state); break;
+        case 3: RandomAgent().move(state); break;
         default: ERROR("unhandled move");
         }
     }
@@ -69,10 +67,11 @@ struct Game {
                 ++round_num;
                 BASE_LOG(info, "");
             }
+            state.printScore();
             LOG("avg moves / search: {}", (float) Moves::moves_count / (float) Moves::call_count);
             state.checkReset();
             ++challenge_num;
         }
-        state.printScore();
+        //state.printScore();
     }
 };
