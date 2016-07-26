@@ -36,10 +36,12 @@ struct MCTSAgent {
     using MoveList = NodeT::MoveList;
     using StatePtr = std::shared_ptr<State>;
 
+    // Used for dot writer
+    static size_t move_count;
+
     const size_t itermax;
     const size_t num_trees;
     const float exploration;
-    size_t move_count;
     const MCTSRand policy;
 
     // suggest imax=1,000..10,000, n=8..10, c=0.7
@@ -47,7 +49,6 @@ struct MCTSAgent {
     : itermax(imax)
     , num_trees(n)
     , exploration(c)
-    , move_count(0)
     , policy(p)
     {}
 
@@ -154,16 +155,17 @@ struct MCTSAgent {
 
         auto best = Move::Null();
         unsigned long high = 0;
-        Sort(merge, [](const auto &a, const auto &b) {
-            return a.second > b.second;
-        });
-
 #ifndef NO_LOGGING
         //ScopedLogLevel l2(LogContext::Level::info);
 #endif
-        //LOG("Search results:");
+        BASE_LOG(info, "Search results:");
+        Sort(merge, [](const auto &a, const auto &b) { return a.second > b.second; });
+        unsigned long sum = 0;
         for (const auto &e : merge) {
-            //LOG("    {} {}", e.second, to_string(e.first));
+            sum += e.second;
+        }
+        for (const auto &e : merge) {
+            BASE_LOG(info, "    {:-2.2f} {}", 100*float(e.second)/float(sum), to_string(e.first));
             if (e.second > high) {
                 high = e.second;
                 best = e.first;
@@ -174,7 +176,7 @@ struct MCTSAgent {
         return best;
     }
 
-    Move singleSearch(const State &root_state) {
+    Move singleSearch(const State &root_state) const {
         TRACE();
         auto root = NodeT::New(Move::Null(), Cards{0}, nullptr, -1);
 

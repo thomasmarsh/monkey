@@ -19,8 +19,8 @@ int main() {
 
     BASE_LOG(info, "sizeof(Move): {}", sizeof(Move));
     GameUI::New(3)->play();
-    //Game().play();
-    const size_t samples = 10000;
+    //Game(3).play();
+    const size_t samples = 1;
     //for (int i=0; i < samples; ++i) {
     //    Game().play();
     //}

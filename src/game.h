@@ -22,7 +22,7 @@ struct Game {
         switch (state.current().id) {
         case 0: MCTSAgent(1000).move(state); break;
         case 1: MCAgent().move(state); break;
-        case 2: HumanAgent().move(state); break;
+        case 2: NaiveAgent().move(state); break;
         case 3: RandomAgent().move(state); break;
         default: ERROR("unhandled move");
         }
@@ -55,7 +55,7 @@ struct Game {
             while (!state.challenge.finished()) {
                 BASE_LOG(info, "ROUND <{}>", round_num);
                 while (!state.challenge.round.finished()) {
-                    //announcePlayer();
+                    announcePlayer();
                     move();
                     if (callback) { callback(); }
                     //printVisible();

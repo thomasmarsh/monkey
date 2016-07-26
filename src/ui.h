@@ -77,8 +77,6 @@ struct GameUI : public std::enable_shared_from_this<GameUI> {
 
     sf::RenderWindow window;
     sf::Font         font;
-    sf::Texture      felt_tx;
-    sf::Sprite       felt_sprite;
 
     explicit GameUI(uint8_t players)
     : game(players)
@@ -95,12 +93,6 @@ struct GameUI : public std::enable_shared_from_this<GameUI> {
         }
         LOG("Render cards");
         UICard::RenderCards(font);
-
-        LOG("Load background");
-        felt_tx.loadFromFile("resources/felt.jpg");
-        felt_sprite.setTexture(felt_tx);
-        felt_sprite.setScale(2048 / felt_sprite.getLocalBounds().width,
-                             1536 / felt_sprite.getLocalBounds().height);
     }
 
     static Ptr New(uint8_t num_players=4) {
@@ -146,10 +138,9 @@ struct GameUI : public std::enable_shared_from_this<GameUI> {
                     window.close();
                 }
             }
-            
-            window.clear(sf::Color::White);
-            window.draw(felt_sprite);
-            
+
+            window.clear(sf::Color(0x00, 0x54, 0xDB));
+
             {
                 std::lock_guard<std::mutex> lock(mtx);
                 view_state.update(clone);
