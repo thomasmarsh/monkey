@@ -1,7 +1,7 @@
 #include "cards.h"
 #include "log.h"
 
-#include "support/json11.hpp"
+#include <json11.hpp>
 
 #include <fstream>
 
