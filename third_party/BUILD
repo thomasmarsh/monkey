@@ -15,3 +15,18 @@ cc_library(
   ]),
   visibility = ["//visibility:public"],
 )
+
+cc_library(
+  name = "sfml",
+  hdrs = glob([
+    "sfml/include/SFML/*.hpp",
+    "sfml/include/SFML/Audio/*.hpp",
+    "sfml/include/SFML/Graphics/*.hpp",
+    "sfml/include/SFML/Graphics/*.inl",
+    "sfml/include/SFML/Network/*.hpp",
+    "sfml/include/SFML/System/*.hpp",
+    "sfml/include/SFML/System/*.inl",
+    "sfml/include/SFML/Window/*.hpp",
+  ]),
+  visibility = ["//visibility:public"],
+)

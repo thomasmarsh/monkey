@@ -1,16 +1,18 @@
 cc_binary(
   name = "monkey",
-  deps = ["//third_party:json11", "//third_party:spdlog"],
+  deps = ["//third_party:json11", "//third_party:spdlog", "//third_party:sfml"],
   copts = [
     "-std=c++14",
     "-Ofast",
     "-DNDEBUG",
     "-DSFML_NO_DEPRECATED_WARNINGS",
     "-Ithird_party",
-    "-Ithird_party/spdlog/include"
+    "-Ithird_party/spdlog/include",
+    "-Ithird_party/sfml/include"
   ],
   linkopts = [
 #   "-ltcmalloc",
+    "-Lthird_party/sfml/lib",
     "-lsfml-window",
     "-lsfml-graphics",
     "-lsfml-system",
