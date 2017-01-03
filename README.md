@@ -19,4 +19,11 @@ depth to win consistently. It primarily serves to help benchmark the flat
 MC and ISMCTS AIs.
 
 There is a terminal based input mechanism for human players. It is quite
-unweildy. The UI should be reimplemented to allow direct human input.
+unwieldy. The UI should be reimplemented to allow direct human input.
+
+To run:
+
+```
+bazel build src:monkey
+./bazel-bin/src/monkey
+```

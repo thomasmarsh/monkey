@@ -28,5 +28,6 @@ cc_library(
     "sfml/include/SFML/System/*.inl",
     "sfml/include/SFML/Window/*.hpp",
   ]),
+  srcs = glob(["sfml/lib/*.dylib"]),
   visibility = ["//visibility:public"],
 )
