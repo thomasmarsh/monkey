@@ -27,3 +27,5 @@ To run:
 bazel build src:monkey
 ./bazel-bin/src/monkey
 ```
+
+Note: you'll need SFML linked from the `third_party` directory. I've set up my link, using homebrew on Mac, like this: `sfml -> /usr/local/Cellar/sfml/2.4.0`.

@@ -6,3 +6,5 @@ archive/x2
 archive/x3
 archive/x4
 ismcts
+/bazel-*
+third_party/sfml
